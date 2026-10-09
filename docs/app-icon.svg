@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#3d86ff"/><stop offset="1" stop-color="#1650d6"/>
+    </linearGradient>
+  </defs>
+  <rect id="back" width="512" height="512" rx="112" fill="url(#bg)"/>
+  <!-- 돋보기 손잡이 -->
+  <path d="M336 336 L420 420" stroke="#fff" stroke-width="56" stroke-linecap="round"/>
+  <!-- 렌즈: 안쪽 흰색 -->
+  <circle cx="230" cy="230" r="148" fill="#fff" stroke="#fff" stroke-width="30"/>
+  <circle cx="230" cy="230" r="132" fill="none" stroke="#dbe7ff" stroke-width="4"/>
+  <!-- 드론 (카메라 드론 정면, 연한 파랑) -->
+  <g transform="translate(230 240) scale(1.06)" fill="#6aa5ff">
+    <g fill="none" stroke="#6aa5ff" stroke-linecap="round">
+      <ellipse cx="-66" cy="-44" rx="46" ry="9" stroke-width="7"/>     <!-- 프로펠러 (납작한 고리) -->
+      <ellipse cx="66" cy="-44" rx="46" ry="9" stroke-width="7"/>
+      <path d="M-30 2 L-36 42 M30 2 L36 42" stroke-width="10"/>          <!-- 다리 -->
+    </g>
+    <path d="M-66 -58 l-6 12 h12z M66 -58 l-6 12 h12z"/>                 <!-- 프로펠러 축 끝 -->
+    <path d="M-74 -38 h16 l3 16 h-22z M58 -38 h16 l3 16 h-22z"/>         <!-- 모터 -->
+    <rect x="-84" y="-26" width="168" height="12" rx="6"/>              <!-- 팔 -->
+    <path d="M-42 -20 q0-16 16-16 h52 q16 0 16 16 l-8 22 q-2 6-8 6 h-52 q-6 0-8-6z"/>  <!-- 몸체 -->
+    <rect x="-17" y="10" width="34" height="30" rx="9"/>                <!-- 카메라 -->
+    <circle cx="0" cy="25" r="9" fill="#fff"/>                          <!-- 렌즈 -->
+  </g>
+</svg>

@@ -1,0 +1,16 @@
+{
+  "name": "드론 수색 GCS",
+  "short_name": "드론 GCS",
+  "description": "산불·인명 수색 드론 구역 분할 및 관제",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#060d1d",
+  "theme_color": "#0b1630",
+  "lang": "ko",
+  "icons": [
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" }
+  ]
+}

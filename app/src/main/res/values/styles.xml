@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- 앱 화면과 같은 어두운 관제 테마. 시작할 때 흰 화면이 번쩍이지 않게 배경색을 맞춤 -->
+    <style name="AppTheme" parent="android:Theme.Material.NoActionBar">
+        <item name="android:windowBackground">@color/bg</item>
+        <item name="android:statusBarColor">@color/panel</item>
+        <item name="android:navigationBarColor">@color/bg</item>
+        <item name="android:colorAccent">@color/accent</item>
+    </style>
+    <color name="bg">#060D1D</color>
+    <color name="panel">#0B1630</color>
+    <color name="accent">#1F6DFF</color>
+</resources>

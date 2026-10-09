@@ -1,0 +1,38 @@
+plugins {
+    id 'com.android.application'
+}
+
+android {
+    namespace 'kr.dronegcs.app'
+    compileSdk 34
+
+    defaultConfig {
+        applicationId 'kr.dronegcs.app'
+        minSdk 24          // Android 7.0 이상
+        targetSdk 34
+        versionCode 1
+        versionName '1.0'
+    }
+
+    // 웹 앱(web/ 폴더)을 그대로 앱에 넣음 — 웹 파일을 한 곳에서만 관리
+    sourceSets {
+        main {
+            assets.srcDirs = ['../web']
+        }
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled false
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+}
+
+dependencies {
+    implementation 'androidx.webkit:webkit:1.11.0'   // WebViewAssetLoader: 앱 안 파일을 https 주소로 열기 (위치 권한에 필요)
+}
