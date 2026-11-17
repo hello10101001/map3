@@ -9,6 +9,8 @@
 
     <!-- GPS가 없는 Wi-Fi 패드에도 설치되게 -->
     <uses-feature android:name="android.hardware.location.gps" android:required="false" />
+    <!-- 텔레메트리 무선기를 태블릿 USB에 바로 꽂아 드론과 통신 (USB 호스트가 없는 기기에도 설치는 되게) -->
+    <uses-feature android:name="android.hardware.usb.host" android:required="false" />
 
     <!-- usesCleartextTraffic: 같은 Wi-Fi의 노트북 브리지(ws://)에 TLS 없이 연결하기 위해 -->
     <application

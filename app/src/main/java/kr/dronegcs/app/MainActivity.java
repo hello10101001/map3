@@ -4,7 +4,15 @@ import android.Manifest;
 import android.app.Activity;
 import android.content.ContentValues;
 import android.content.Intent;
+import android.content.Context;
 import android.content.pm.PackageManager;
+import android.hardware.usb.UsbDevice;
+import android.hardware.usb.UsbDeviceConnection;
+import android.hardware.usb.UsbManager;
+import android.app.PendingIntent;
+import android.os.Handler;
+import android.os.Looper;
+import android.util.Base64;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
@@ -16,6 +24,7 @@ import android.provider.Settings;
 import android.view.WindowManager;
 import android.webkit.GeolocationPermissions;
 import android.webkit.JavascriptInterface;
+import android.webkit.ValueCallback;
 import android.webkit.ServiceWorkerClient;
 import android.webkit.ServiceWorkerController;
 import android.webkit.WebChromeClient;
@@ -28,9 +37,20 @@ import android.widget.Toast;
 
 import androidx.webkit.WebViewAssetLoader;
 
+import com.hoho.android.usbserial.driver.UsbSerialDriver;
+import com.hoho.android.usbserial.driver.UsbSerialPort;
+import com.hoho.android.usbserial.driver.UsbSerialProber;
+import com.hoho.android.usbserial.util.SerialInputOutputManager;
+
+import org.json.JSONObject;
+
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileOutputStream;
+import java.io.InputStream;
 import java.io.OutputStream;
+import java.net.HttpURLConnection;
+import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
@@ -45,12 +65,24 @@ public class MainActivity extends Activity {
     private static final String HOST = "appassets.androidplatform.net";
     private static final String START_URL = "https://" + HOST + "/assets/index.html";
     private static final int REQ_LOCATION = 1;
+    private static final int REQ_FILE = 2;
+    /** 승인 서류 고르기(input type=file) 결과를 웹에 돌려줄 곳 */
+    private ValueCallback<Uri[]> fileCb;
 
     private WebView web;
     private WebViewAssetLoader assets;
     /** 권한 창이 떠 있는 동안 들어온 위치 요청들 (하나라도 놓치면 그 요청은 시간 초과까지 기다림) */
     private final List<Object[]> pendingGeo = new ArrayList<>();
     private long lastBack;
+
+    /* ---------- 텔레메트리 무선기 (USB 시리얼) ---------- */
+    private static final String USB_PERMISSION = "kr.dronegcs.app.USB_PERMISSION";
+    private final Handler ui = new Handler(Looper.getMainLooper());
+    private UsbSerialPort usbPort;
+    private SerialInputOutputManager usbIo;
+    private final ByteArrayOutputStream usbBuf = new ByteArrayOutputStream();
+    private boolean usbFlushQueued;
+    private int usbGen;   // 다시 연결할 때 이전 연결의 늦은 콜백을 버리려고
 
     @Override
     protected void onCreate(Bundle saved) {
@@ -95,6 +127,21 @@ public class MainActivity extends Activity {
         });
 
         web.setWebChromeClient(new WebChromeClient() {
+            /** 웹의 파일 고르기 칸(비행 승인 서류): 안드로이드 파일·사진 선택 창을 띄움 */
+            @Override
+            public boolean onShowFileChooser(WebView v, ValueCallback<Uri[]> cb, FileChooserParams p) {
+                if (fileCb != null) fileCb.onReceiveValue(null);
+                fileCb = cb;
+                try {
+                    startActivityForResult(p.createIntent(), REQ_FILE);
+                } catch (Exception e) {
+                    fileCb = null;
+                    cb.onReceiveValue(null);
+                    Toast.makeText(MainActivity.this, "파일 선택 창을 열 수 없습니다", Toast.LENGTH_SHORT).show();
+                }
+                return true;
+            }
+
             @Override
             public void onGeolocationPermissionsShowPrompt(String origin, GeolocationPermissions.Callback cb) {
                 if (hasLocationPermission()) {
@@ -138,6 +185,15 @@ public class MainActivity extends Activity {
         pendingGeo.clear();
     }
 
+    @Override
+    protected void onActivityResult(int code, int result, Intent data) {
+        super.onActivityResult(code, result, data);
+        if (code == REQ_FILE && fileCb != null) {
+            fileCb.onReceiveValue(WebChromeClient.FileChooserParams.parseResult(result, data));
+            fileCb = null;
+        }
+    }
+
     /** 뒤로 가기: 웹 앱이 열린 창(사진, 시트, 다른 메뉴)을 먼저 닫고, 지도 화면에서는 두 번 눌러 종료 */
     @Override
     @SuppressWarnings("deprecation")
@@ -174,8 +230,101 @@ public class MainActivity extends Activity {
 
     @Override
     protected void onDestroy() {
+        usbClose(false);
         web.destroy();
         super.onDestroy();
+    }
+
+    /** 웹에 USB 연결 상태를 알림: window.__usbState(상태, 안내) — 상태 open / error / closed */
+    private void usbState(String st, String msg) {
+        String js = "window.__usbState&&window.__usbState(" + JSONObject.quote(st) + "," + JSONObject.quote(msg) + ")";
+        ui.post(() -> web.evaluateJavascript(js, null));
+    }
+
+    /** 무선기를 찾아 (권한을 받고) 엶. UI 스레드에서 부름 */
+    private void usbOpen(int baud) {
+        usbClose(false);
+        final int gen = ++usbGen;
+        UsbManager mgr = (UsbManager) getSystemService(Context.USB_SERVICE);
+        List<UsbSerialDriver> drivers = mgr == null ? new ArrayList<>() : UsbSerialProber.getDefaultProber().findAllDrivers(mgr);
+        if (drivers.isEmpty()) {
+            usbState("error", "USB 무선기를 찾지 못했습니다. 텔레메트리 무선기를 태블릿 USB(OTG)에 꽂았는지 확인하세요.");
+            return;
+        }
+        UsbSerialDriver drv = drivers.get(0);
+        UsbDevice dev = drv.getDevice();
+        if (!mgr.hasPermission(dev)) {
+            int flags = Build.VERSION.SDK_INT >= 31 ? PendingIntent.FLAG_MUTABLE : 0;
+            PendingIntent pi = PendingIntent.getBroadcast(this, 0, new Intent(USB_PERMISSION).setPackage(getPackageName()), flags);
+            mgr.requestPermission(dev, pi);
+            usbState("wait", "USB 사용 허용 창에서 '확인'을 누르세요.");
+            // 허용 결과는 1초마다 확인 (방송 수신기 등록 없이, 최대 60초)
+            final long until = System.currentTimeMillis() + 60000;
+            ui.postDelayed(new Runnable() {
+                @Override public void run() {
+                    if (gen != usbGen) return;
+                    if (mgr.hasPermission(dev)) usbOpenWith(mgr, drv, baud, gen);
+                    else if (System.currentTimeMillis() < until) ui.postDelayed(this, 1000);
+                    else usbState("error", "USB 사용을 허용하지 않았습니다. '연결'을 다시 누르세요.");
+                }
+            }, 1000);
+            return;
+        }
+        usbOpenWith(mgr, drv, baud, gen);
+    }
+
+    private void usbOpenWith(UsbManager mgr, UsbSerialDriver drv, int baud, int gen) {
+        try {
+            UsbDeviceConnection conn = mgr.openDevice(drv.getDevice());
+            if (conn == null) throw new Exception("장치를 열 수 없습니다");
+            UsbSerialPort port = drv.getPorts().get(0);
+            port.open(conn);
+            port.setParameters(baud, 8, UsbSerialPort.STOPBITS_1, UsbSerialPort.PARITY_NONE);
+            try { port.setDTR(true); port.setRTS(true); } catch (Exception ignored) { }   // 일부 무선기는 DTR이 켜져야 데이터를 보냄
+            usbPort = port;
+            usbIo = new SerialInputOutputManager(port, new SerialInputOutputManager.Listener() {
+                @Override public void onNewData(byte[] data) { usbData(data, gen); }
+                @Override public void onRunError(Exception e) {
+                    if (gen != usbGen) return;
+                    usbClose(false);
+                    usbState("error", "USB 연결이 끊겼습니다 (" + e.getMessage() + ")");
+                }
+            });
+            usbIo.start();
+            usbState("open", drv.getClass().getSimpleName().replace("SerialDriver", "") + " · " + baud + "bps");
+        } catch (Exception e) {
+            usbClose(false);
+            usbState("error", "무선기를 열지 못했습니다: " + e.getMessage());
+        }
+    }
+
+    /** 받은 바이트를 모아 50ms마다 한 번에 웹으로 (무선기는 작은 조각으로 자주 보내서 그대로 넘기면 화면이 느려짐) */
+    private void usbData(byte[] data, int gen) {
+        if (gen != usbGen) return;
+        synchronized (usbBuf) {
+            usbBuf.write(data, 0, data.length);
+            if (usbFlushQueued) return;
+            usbFlushQueued = true;
+        }
+        ui.postDelayed(() -> {
+            byte[] chunk;
+            synchronized (usbBuf) {
+                chunk = usbBuf.toByteArray();
+                usbBuf.reset();
+                usbFlushQueued = false;
+            }
+            if (chunk.length == 0 || gen != usbGen) return;
+            String b64 = Base64.encodeToString(chunk, Base64.NO_WRAP);
+            web.evaluateJavascript("window.__usbData&&window.__usbData('" + b64 + "')", null);
+        }, 50);
+    }
+
+    private void usbClose(boolean notify) {
+        usbGen++;
+        if (usbIo != null) { try { usbIo.stop(); } catch (Exception ignored) { } usbIo = null; }
+        if (usbPort != null) { try { usbPort.close(); } catch (Exception ignored) { } usbPort = null; }
+        synchronized (usbBuf) { usbBuf.reset(); usbFlushQueued = false; }
+        if (notify) usbState("closed", "연결 끊음");
     }
 
     /** 웹 앱에서 window.GCSAndroid.xxx() 로 부르는 기능 */
@@ -245,6 +394,75 @@ public class MainActivity extends Activity {
         @JavascriptInterface
         public void openLocationSettings() {
             runOnUiThread(() -> startActivity(new Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS)));
+        }
+
+        /** 공식 비행금지구역 자료(브이월드) 받기: 웹에서 직접 부르면 CORS로 막혀서 앱이 대신 받아 window.__nativeHttp(id, 상태코드, 본문)로 돌려줌.
+         *  안전을 위해 api.vworld.kr 주소만 허용 */
+        @JavascriptInterface
+        public void httpGet(String url, String id) {
+            new Thread(() -> {
+                int code = 0;
+                String body;
+                try {
+                    URL u = new URL(url);
+                    if (!"https".equals(u.getProtocol()) || !"api.vworld.kr".equals(u.getHost())) throw new Exception("허용되지 않은 주소");
+                    HttpURLConnection c = (HttpURLConnection) u.openConnection();
+                    c.setConnectTimeout(10000);
+                    c.setReadTimeout(20000);
+                    c.setRequestProperty("Referer", "https://" + HOST + "/");
+                    code = c.getResponseCode();
+                    InputStream is = code < 400 ? c.getInputStream() : c.getErrorStream();
+                    ByteArrayOutputStream bo = new ByteArrayOutputStream();
+                    if (is != null) {
+                        byte[] buf = new byte[16384];
+                        int n;
+                        while ((n = is.read(buf)) > 0) bo.write(buf, 0, n);
+                        is.close();
+                    }
+                    body = bo.toString("UTF-8");
+                    c.disconnect();
+                } catch (Exception e) {
+                    code = 0;
+                    body = String.valueOf(e.getMessage());
+                }
+                String js = "window.__nativeHttp&&window.__nativeHttp(" + JSONObject.quote(id) + "," + code + "," + JSONObject.quote(body) + ")";
+                runOnUiThread(() -> web.evaluateJavascript(js, null));
+            }).start();
+        }
+
+        /** 텔레메트리 무선기 열기 (baud: 보통 57600). 결과는 window.__usbState, 받은 데이터는 window.__usbData(base64) */
+        @JavascriptInterface
+        public void usbOpen(int baud) {
+            runOnUiThread(() -> MainActivity.this.usbOpen(baud));
+        }
+
+        /** 무선기로 보내기 (MAVLink 바이트, base64). 성공하면 true */
+        @JavascriptInterface
+        public boolean usbWrite(String b64) {
+            UsbSerialPort p = usbPort;
+            if (p == null) return false;
+            try {
+                p.write(Base64.decode(b64, Base64.DEFAULT), 1000);
+                return true;
+            } catch (Exception e) {
+                return false;
+            }
+        }
+
+        @JavascriptInterface
+        public void usbClose() {
+            runOnUiThread(() -> MainActivity.this.usbClose(true));
+        }
+
+        /** 탐지 위치 공유: 안드로이드 공유창(문자, 카카오톡, 메일 등)으로 글을 보냄 */
+        @JavascriptInterface
+        public void share(String text) {
+            runOnUiThread(() -> {
+                Intent send = new Intent(Intent.ACTION_SEND);
+                send.setType("text/plain");
+                send.putExtra(Intent.EXTRA_TEXT, text);
+                startActivity(Intent.createChooser(send, "탐지 위치 공유"));
+            });
         }
     }
 }

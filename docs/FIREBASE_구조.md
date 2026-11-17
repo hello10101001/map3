@@ -9,9 +9,10 @@
 |---|---|---|
 | status | string | uploaded → flying → done / aborted |
 | home | GeoPoint | 출발지 |
-| alt, speed, shot | number | 고도(m), 속도(m/s), 사진 간격(m) |
+| alt, speed, shot | number | 땅에서 비행 고도(m), 속도(m/s), 사진 간격(m) |
 | grid | map | `lat0, lng0, x0, y0, cw, ch, cols, rows` (칸 번호 계산용) |
-| drones | array | `{id, name, cells, route: GeoPoint[]}` |
+| drones | array | `{id, name, cells, route: GeoPoint[], alts: number[]}` — route는 맡은 칸 가운데(비행 순서), alts는 칸마다 출발지 대비 비행 고도(m, 지형 반영) |
+| terrain | string | 지형 고도 반영: `ok`(반영) / `partial`(일부 자료 없음) / `flat`(자료 없음, 출발지 기준 같은 고도) |
 | createdAt, startedAt, endedAt | Timestamp | |
 | coverage | number | 종료 시 탐색률 (0~1) |
 
@@ -32,6 +33,7 @@
 | hdg | number | | 기수 방향 ° |
 | takenAt | Timestamp | ✔ | 촬영 시각 |
 | cell | number | 권장 | 칸 번호 (아래 공식). 없으면 앱이 위도 범위로 찾음 |
+| tempAvgC | number | 권장 | 이 순간 열화상 프레임의 평균 표면 온도 °C. 앱이 칸마다 평균을 내어 칸 정보·데이터 보기(격자 평균 온도 그래프)에 보여줌 |
 | thumbUrl | string | 권장 | 축소본 다운로드 URL (목록에 사용) |
 | url | string | | 원본 다운로드 URL (크게 보기) |
 | path | string | | Storage 경로 (url이 없으면 앱이 이 경로로 URL을 받음) |
@@ -67,6 +69,8 @@ dy = (0.5 - py/이미지높이) · H   # 앞쪽 +
 - PX4 파라미터 `TRIG_INTERFACE = MAVLink`, `TRIG_MODE = Distance (on command)` 로 두면, 앱이 올린 임무의 `DO_SET_CAM_TRIGG_DIST` 간격마다 PX4가 `CAMERA_TRIGGER` 메시지를 보냅니다.
 - 파이는 PX4 TELEM2에 UART로 연결해 이 메시지를 받는 순간 사진을 찍고, 그때의 `GLOBAL_POSITION_INT`(위도·경도·상대고도·방향)를 함께 기록합니다.
 - 파이가 mavlink-router로 텔레메트리를 지상 브리지에도 넘겨주면, 촬영과 위치 전달을 같은 연결로 처리할 수 있습니다.
+- 같은 순간 열화상 프레임의 평균 표면 온도를 `tempAvgC`로 함께 올리세요 (방사 측정형 열화상, 예: FLIR Lepton 3.5 → 픽셀 온도 평균).
+  앱의 ‘재촬영’은 칸을 열화상 화각(앱 사양의 ‘열화상 가로 화각’) 기준으로 잘게 나눠 다시 훑고, 촬영 간격도 열화상 기준으로 좁힙니다.
 
 ### 칸 번호(cell) 공식
 `missions/{임무ID}.grid` 값으로 계산합니다.
@@ -118,3 +122,15 @@ service cloud.firestore {
 ## 4. 앱에서 연결
 설정 → Firebase (사진 서버) → firebaseConfig 붙여 넣기 → 이메일·비밀번호 → 연결 · 로그인.
 Authentication에서 이메일/비밀번호 로그인을 켜 두어야 합니다.
+
+## 3. 드론 연결용 Realtime Database (선택)
+
+위 Firestore 문서(사진·탐지)와 별개로, 브리지 없이 드론을 LTE로 연결할 때는 같은 Firebase 프로젝트의 **Realtime Database**를 씁니다
+(앱 설정 → 연결 방식 → Firebase). 구조·보안 규칙·드론 에이전트는 drone-firebase 묶음의 README에 있습니다.
+
+| 경로 | 쓰는 쪽 | 내용 |
+|---|---|---|
+| `/live/{드론}` | 드론 | 위치·고도·배터리·모드·시동 (1초마다) |
+| `/missions/{임무}/drones/{드론}` | 앱 | `{home, alt, speed, shot, takeoff, cam, route:[[lat,lng,출발지 대비 고도],..]}` |
+| `/commands/{드론}` | 앱 | `upload` · `start` · `rtl` (드론이 받으면 지움, 60초 지나면 만료) |
+| `/acks/{드론}`, `/logs/{드론}`, `/tracks/{임무}/{드론}` | 드론 | 명령 응답, PX4 메시지, 비행 궤적 |
