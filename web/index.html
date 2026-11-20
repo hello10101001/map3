@@ -346,7 +346,7 @@ td.r,th.r{text-align:right}
             <button class="btn" id="rsCancel">취소</button><button class="btn pri" id="rsGo" disabled>재촬영 시작</button>
           </div>
           <div class="legend">
-            <div><span class="sw" style="border:2px solid #ffffff"></span>수색 영역</div>
+            <div><span class="sw" style="border:2px solid #facc15"></span>수색 영역</div>
             <div><span class="sw" style="background:#22c55e99"></span>탐색 완료</div>
             <div><span class="sw" style="background:#2f6bff88"></span>탐색 중 구역</div>
             <div><span class="sw" style="background:#ffffff40;outline:1px solid #ffffff66"></span>미탐색</div>
@@ -376,7 +376,7 @@ td.r,th.r{text-align:right}
             </div>
             <h4>수색 영역</h4>
             <div class="row2">
-              <button class="btn sm on" id="modeAuto">자동 (비행시간 기준)</button>
+              <button class="btn sm" id="modeAuto">자동 (비행시간 기준)</button>
               <button class="btn sm" id="modeDraw">영역 그리기</button>
             </div>
             <p class="note" id="modeNote"></p>
@@ -865,7 +865,8 @@ function createMap(canvas){
 /* ====================== 앱 상태 ====================== */
 const S={
   launch:null,launchSrc:"none",me:null,locError:null,perm:"확인 중",lastFix:null,
-  mode:"auto",drawRect:null,dragRect:null,picking:false,heat:false,
+  mode:null,drawRect:null,   // 수색 구역 방식: null = 아직 안 고름 (출발지를 정해도 영역을 저절로 만들지 않음)
+  dragRect:null,picking:false,heat:false,
   plan:null,drones:[],mission:null,recSel:null,view:"map",detFilter:"all",live:{},upload:null,selCell:null,viewList:[],viewIdx:0
 };
 const map=createMap($("map"));
@@ -1443,6 +1444,7 @@ function prepareNext(){
   S.drones=members.length?makeDrones(S.plan,members):[];
   renderSide();map.invalidate();
 }
+const AREA_EDGE="#facc15";   // 수색 영역 테두리 (노랑)
 function replan(fit=true){
   if(isRunning())return;
   if(isBetween())return prepareNext();
@@ -1461,7 +1463,8 @@ function replan(fit=true){
     if(!S.drawRect){renderSide();map.invalidate();return}
     // 드론 한도를 넘는 영역이면 이번 비행에 갈 수 있는 만큼만 맡기고 나머지는 다음 회차로
     plan=planRound(makeGrid(rectXY(S.drawRect[0],S.drawRect[1]),s),members,spec.speed);
-  }else plan=autoPlan(members,s,spec.speed);
+  }else if(S.mode==="auto")plan=autoPlan(members,s,spec.speed);
+  else{renderSide();map.invalidate();return}   // 구역 방식을 아직 안 고름 → ‘자동’ 또는 ‘영역 그리기’를 누를 때까지 영역 없음
   const o=S.launch;
   plan.cells.forEach(c=>placeCell(c,plan.cw,plan.ch,o));
   S.plan=plan;
@@ -1517,7 +1520,8 @@ map.overlay=(ctx,E)=>{
     const b=plan.bounds;
     if(!S.reshoot){   // 수색 영역 테두리 (다각형이면 그 모양). 재촬영 비행은 고른 칸만 보이게 테두리 없음
       tracePoly(ctx,(plan.polyLL||[toLL(b.x0,b.y0,o),toLL(b.x1,b.y0,o),toLL(b.x1,b.y1,o),toLL(b.x0,b.y1,o)]).map(P));
-      ctx.strokeStyle="#ffffff";ctx.lineWidth=3;ctx.stroke();
+      ctx.strokeStyle="rgba(0,0,0,.55)";ctx.lineWidth=5.5;ctx.stroke();   // 노란 선 밑에 어두운 테두리 → 밝은 위성사진 위에서도 잘 보이게
+      ctx.strokeStyle=AREA_EDGE;ctx.lineWidth=3;ctx.stroke();
     }
     (plan.holesLL||[]).forEach(h=>drawZone(ctx,h.map(P),"hole"));
     const home=P(o);
@@ -2113,6 +2117,10 @@ function onTeleMsg(m){
   }
   if(tele.state==="wait")teleOk();
   if(m.type==="link"){tele.diag=Object.assign({},m,{at:Date.now()});return}   // 노트북 브리지: 무선기 포트·파이 상태
+  if(m.type==="status"&&!(num(m.id??m.sysid)>=1)){   // 기체가 아닌 브리지 자체 알림 (예: 파이에 임무 정보를 못 보냄)
+    const t=String(m.text||"").trim(),sev=num(m.sev);if(!t)return;
+    logEvent("브리지: "+t);if(sev==null||sev<=4)toast(t);return;
+  }
   const id=Math.round(num(m.id??m.sysid));if(!(id>=1&&id<=MAX_SYSID))return;
   const lat=num(m.lat),lng=num(m.lng??m.lon);
   if(m.type==="ack")return onAck(m,id);
@@ -2639,6 +2647,7 @@ function logEvent(msg){if(!S.mission)return;S.mission.log.push({sim:S.mission.t,
 
 function startMission(){
   if(!S.launch)return toast("먼저 출발지를 정해 주세요.");
+  if(!S.mode&&!S.reshoot)return toast("수색 구역을 먼저 고르세요: ‘자동’ 또는 ‘영역 그리기’.");
   if(S.mode==="draw"&&!S.drawRect&&!S.reshoot)return toast("지도 위를 드래그해서 영역을 먼저 그려 주세요.");
   if(!activeFleet().length)return toast("투입 가능한 드론이 없습니다. 드론 관리에서 기체를 켜 주세요.");
   const live=prefs.source==="live";
@@ -3036,11 +3045,11 @@ function renderSide(){
     return`<div class="airrow k-${L.kind}${h.ok?" ok":h.kind==="caution"?"":" need"}"><b>${esc(L.short)}</b><span class="nm" title="${esc(h.name)}">${esc(h.name)} · ${hitWhere(h)}</span><button class="btn sm" data-air="${esc(h.id)}">${h.kind==="caution"?"보기":h.ok||a?"승인 보기":"승인서 등록"}</button><span class="st">${st}</span></div>`;
   }).join("");
   if(airListHtml!==airHtml)$("airList").innerHTML=airListHtml=airHtml;   // 바뀔 때만 (누르는 중인 버튼이 사라지지 않게)
-  $("modeNote").textContent=!S.launch?`먼저 출발지를 정하세요: ‘${prefs.source==="live"?"드론 GPS로 설정":"내 위치로 설정"}’ 또는 ‘지도에서 지정’.`:S.mode==="auto"
+  $("modeNote").textContent=!S.launch?`먼저 출발지를 정하세요: ‘${prefs.source==="live"?"드론 GPS로 설정":"내 위치로 설정"}’ 또는 ‘지도에서 지정’.`:!S.mode&&!S.reshoot?"수색 구역을 고르세요: ‘자동’은 비행시간에 맞춰 영역을 만들고, ‘영역 그리기’는 지도에 직접 그립니다.":S.mode==="auto"
     ?`출발지를 중심으로, 투입 드론이 한 번 비행으로 촬영하고 돌아올 수 있는 가장 큰 영역을 만듭니다.`
     :(S.drawRect?"한도를 넘는 영역은 나눠서 비행합니다. 회색 칸은 드론이 복귀한 뒤 ‘이어서 하기’로 탐색합니다.":"지도를 드래그해 영역을 그리세요. 그리는 동안 투입 드론 비행 한도의 몇 %인지 표시됩니다.");
   const list=$("droneList");
-  if(!S.drones.length){list.innerHTML=`<div class="empty">${!S.launch?(prefs.source==="live"?"드론 GPS를 기다리는 중입니다. 드론을 켜고 브리지에 연결하면 드론 위치가 출발지가 됩니다.":"출발지를 기다리는 중입니다."):S.mode==="draw"&&!S.drawRect?"영역을 그리면 드론별 구역이 표시됩니다.":"투입할 드론이 없습니다."}</div>`;updateProgress();updateButtons();return}
+  if(!S.drones.length){list.innerHTML=`<div class="empty">${!S.launch?(prefs.source==="live"?"드론 GPS를 기다리는 중입니다. 드론을 켜고 브리지에 연결하면 드론 위치가 출발지가 됩니다.":"출발지를 기다리는 중입니다."):!S.mode?"‘자동’ 또는 ‘영역 그리기’를 고르면 드론별 구역이 표시됩니다.":S.mode==="draw"&&!S.drawRect?"영역을 그리면 드론별 구역이 표시됩니다.":"투입할 드론이 없습니다."}</div>`;updateProgress();updateButtons();return}
   list.innerHTML=S.drones.map(d=>{
     const need=d.cost/spec.speed,over=overLimit(d),area=p.cw*p.ch*d.path.length;
     return `<div class="dr" id="dr${d.k}"><span class="dot" style="background:${d.color}"></span><span class="nm">${esc(d.name)}</span><b class="pct num" data-pct>0%</b><span class="st" data-st></span>
@@ -3598,24 +3607,25 @@ $("wSpeed").onchange=$("wDir").onchange=()=>{
   saveAll();replan(S.mode==="auto");
   if(windStrong())toast(`풍속 ${spec.wind}m/s는 비행 속도(${spec.speed}m/s)에 비해 강합니다. 맞바람 구간에서 거의 나아가지 못할 수 있습니다.`);
 };
+const fleetChanged=()=>{saveAll();renderFleet();replan(S.mode==="auto")};   // 기체·성능 설정이 바뀜 → 저장, 목록·계획 다시
 $("specForm").addEventListener("change",e=>{
   const map2={pFlight:["flight",5,60],pReserve:["reserve",0,50],pSpeed:["speed",2,20],pClimb:["climb",.5,10],pDescent:["descent",.3,5],pAlt:["alt",30,150],pFov:["fov",30,120],pTfov:["tfov",10,120],pOverlap:["overlap",0,80],pFwd:["fwd",0,90],pPhotoMB:["photoMB",1,50]};
   const k=map2[e.target.id];if(!k)return;const v=parseFloat(e.target.value);
   spec[k[0]]=isFinite(v)?clamp(v,k[1],k[2]):DEFAULT_SPEC[k[0]];e.target.value=spec[k[0]];
-  saveAll();renderFleet();replan(S.mode==="auto");
+  fleetChanged();
 });
 $("fleetBody").addEventListener("change",e=>{
   const t=e.target;
   if(t.dataset.en){fleet[+t.dataset.en].enabled=t.checked}
   if(t.dataset.nm){fleet[+t.dataset.nm].name=t.value.trim().slice(0,20)||"드론 "+(+t.dataset.nm+1)}
   if(t.dataset.bt){const v=parseFloat(t.value);fleet[+t.dataset.bt].battery=isFinite(v)?clamp(Math.round(v),0,100):100}
-  saveAll();renderFleet();replan(S.mode==="auto");
+  fleetChanged();
 });
-$("btnAddDrone").onclick=()=>{fleet.push(newDrone(fleet.length));saveAll();renderFleet();replan(S.mode==="auto");toast(`${fleet[fleet.length-1].name}을(를) 추가했습니다. 기체 번호(MAV_SYS_ID) ${fleet.length}번과 연결됩니다.`)};
+$("btnAddDrone").onclick=()=>{fleet.push(newDrone(fleet.length));fleetChanged();toast(`${fleet[fleet.length-1].name}을(를) 추가했습니다. 기체 번호(MAV_SYS_ID) ${fleet.length}번과 연결됩니다.`)};
 $("btnDelDrone").onclick=()=>{
   if(fleet.length<=1)return toast("기체가 한 대는 있어야 합니다.");
   const f=fleet[fleet.length-1];
-  ask("기체 삭제",`${f.name}(기체 번호 ${fleet.length}번)을 목록에서 지웁니다.`,()=>{fleet.pop();saveAll();renderFleet();replan(S.mode==="auto")});
+  ask("기체 삭제",`${f.name}(기체 번호 ${fleet.length}번)을 목록에서 지웁니다.`,()=>{fleet.pop();fleetChanged()});
 };
 $("detFilter").onclick=e=>{const c=e.target.closest(".chip");if(c){S.detFilter=c.dataset.f;renderDetect()}};
 $("expCsv").onclick=()=>{
@@ -3846,7 +3856,7 @@ function fitRoutes(){
 function drawRoutes(ctx,E){
   const D=RV.data;if(!D)return;
   const o=D.launch,P=(x,y)=>{const l=toLL(x,y,o);return E.toScreen(l.lat,l.lng)};
-  if(D.bounds){const b=D.bounds;tracePoly(ctx,[P(b.x0,b.y0),P(b.x1,b.y0),P(b.x1,b.y1),P(b.x0,b.y1)]);ctx.strokeStyle="#ffffff";ctx.lineWidth=2;ctx.setLineDash([8,6]);ctx.stroke();ctx.setLineDash([])}
+  if(D.bounds){const b=D.bounds;tracePoly(ctx,[P(b.x0,b.y0),P(b.x1,b.y0),P(b.x1,b.y1),P(b.x0,b.y1)]);ctx.strokeStyle=AREA_EDGE;ctx.lineWidth=2.5;ctx.setLineDash([8,6]);ctx.stroke();ctx.setLineDash([])}
   const ends=[];
   selDrones().forEach(d=>d.rounds.forEach(r=>{
     const segs=segsOf(r.pts).map(sg=>sg.map(p=>P(p.x,p.y)));

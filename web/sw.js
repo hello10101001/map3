@@ -2,7 +2,7 @@
    - 앱 화면(index.html 등): 네트워크 우선 → 실패하면 캐시 (수정본이 바로 반영되고, 오프라인에서도 열림)
    - 지도 타일·지형 고도 자료: 캐시 우선 → 한 번 본 지역은 현장에서 통신이 끊겨도 보임 (최대 3000장)
    - 미리 받은 현장용 지도(OFFLINE_CACHE)를 가장 먼저 찾음 */
-const APP_CACHE = "gcs-app-v64";
+const APP_CACHE = "gcs-app-v66";
 const TILE_CACHE = "gcs-tiles-v1";
 const OFFLINE_CACHE = "gcs-offline-v1";   // ‘현장용 지도 미리 받기’로 받은 지도·지형 (앱 화면이 직접 저장, 자동 정리 안 함)
 // "./"(폴더 주소)는 넣지 않음: 안드로이드 앱 안에서는 폴더 주소에 파일이 없어 설치 전체가 실패함
