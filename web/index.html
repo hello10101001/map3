@@ -301,7 +301,7 @@ td.r,th.r{text-align:right}
     <svg class="logo" viewBox="0 0 48 34" fill="none" stroke="#e6ecf8" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M3 5h14M31 5h14M10 5v5M38 5v5M10 10l8 6h12l8-6"/><rect x="17" y="14" width="14" height="9" rx="4" fill="#e6ecf8"/><path d="M20 23l-3 7M28 23l3 7"/></svg>
     <div class="ttl"><h1>GCS (Ground Control System)</h1></div>
     <div class="sp"></div>
-    <span class="pill" id="telePill" hidden><i></i><span></span></span>
+    <span class="pill" id="telePill" role="button" tabindex="0" title="눌러서 드론 연결 상태 보기" style="cursor:pointer" hidden><i></i><span></span></span>
     <span class="pill wait" id="gpsPill"><i></i><span>위치 확인 중</span></span>
     <span class="pill clockpill num" id="clock"></span>
   </header>
@@ -453,10 +453,10 @@ td.r,th.r{text-align:right}
           <section class="card">
             <h3>보유 기체</h3>
             <div class="tbl"><table>
-              <thead><tr><th>투입</th><th>기체 이름</th><th class="r">시작 배터리</th><th class="r">사용 가능 시간</th></tr></thead>
+              <thead><tr><th>투입</th><th>기체 이름</th><th class="r">시작 배터리</th><th class="r">사용 가능 시간</th><th>연결</th></tr></thead>
               <tbody id="fleetBody"></tbody>
             </table></div>
-            <div class="row2" style="margin-top:12px"><button class="btn sm" id="btnAddDrone">기체 추가</button><button class="btn sm danger" id="btnDelDrone">마지막 기체 삭제</button></div>
+            <div class="row2" style="margin-top:12px"><button class="btn sm" id="btnAddDrone">기체 추가</button><button class="btn sm danger" id="btnDelDrone">마지막 기체 삭제</button><button class="btn sm pri" id="btnChkAll">전체 연결 확인</button></div>
             <p class="note" id="fleetNote"></p>
           </section>
           <section class="card">
@@ -538,7 +538,7 @@ td.r,th.r{text-align:right}
         <button class="btn danger" id="btnFactory" style="margin-top:18px;max-width:760px;width:100%">모든 설정 초기화</button>
         <div class="setpanes" id="setPanes">
           <section class="card" data-sp="tele">
-            <h3>드론 실시간 위치</h3>
+            <h3>드론 연결</h3>
             <div class="form">
               <label>위치 데이터<select id="sSource"><option value="sim">시뮬레이션</option><option value="live">실시간 (드론 텔레메트리)</option></select></label>
               <label>연결 방식<select id="sLink"><option value="usb">텔레메트리 무선기 (태블릿 USB에 직접)</option><option value="ws">브리지 · Wi-Fi (gcs_bridge.py)</option><option value="fb">Firebase (드론 LTE 직접)</option></select></label>
@@ -551,7 +551,7 @@ td.r,th.r{text-align:right}
               <button class="btn pri" id="btnTele">연결</button>
               <button class="btn" id="btnTeleOff">연결 끊기</button>
             </div>
-            <dl class="kv" style="margin-top:12px"><dt>상태</dt><dd id="teleState">꺼짐</dd><dt>수신 기체</dt><dd class="num" id="teleCount">0기</dd></dl>
+            <dl class="kv" style="margin-top:12px"><dt>상태</dt><dd id="teleState">꺼짐</dd><dt>수신 기체</dt><dd class="num" id="teleCount">0기</dd></dl><div id="teleDiag" hidden style="white-space:pre-line;margin-top:10px;padding:10px 14px;border-radius:10px;background:var(--panel2);font-size:14px;line-height:1.6"></div>
             <div class="tbl" id="teleTable" style="margin-top:10px"></div>
             <p class="note" id="fbLinkNote" hidden>드론의 라즈베리파이(drone_agent.py)가 LTE로 Firebase Realtime Database에 위치를 올리고 명령을 받습니다. 설정 → Firebase에서 운영자 계정으로 로그인해야 하며, firebaseConfig에 databaseURL이 있어야 합니다. 드론 번호(droneId) 1, 2, 3…이 드론 관리의 드론 1, 2, 3…과 연결됩니다.</p>
             <p class="note" id="usbLinkNote" hidden><b>텔레메트리 무선기</b>: 지상용 무선기를 태블릿 USB(OTG 젠더)에 꽂고 ‘연결’을 누르세요. 처음에는 USB 사용 허용 창이 뜹니다. 드론 위치·경로 업로드·이륙·복귀를 무선기로 주고받고(보통 1~2km), 라즈베리파이의 탐지 알림도 무선기로 받습니다.<br>
@@ -658,7 +658,7 @@ td.r,th.r{text-align:right}
     </aside>
   </div>
 </div>
-<div class="confirm" id="confirm" hidden><section class="card"><h3 id="cfTitle"></h3><p class="note" id="cfText" style="font-size:14px"></p><div class="row2" style="margin-top:16px"><button class="btn" id="cfNo">취소</button><button class="btn pri" id="cfYes">확인</button></div></section></div>
+<div class="confirm" id="confirm" hidden><section class="card"><h3 id="cfTitle"></h3><p class="note" id="cfText" style="font-size:14px;white-space:pre-line"></p><div class="row2" style="margin-top:16px"><button class="btn" id="cfNo">취소</button><button class="btn pri" id="cfYes">확인</button></div></section></div>
 
 <script src="firebase-link.js"></script>
 <script src="mavlink-usb.js"></script>
@@ -934,7 +934,7 @@ function maxGround(x0,y0,x1,y1){
   const k=`${x0.toFixed(1)},${y0.toFixed(1)},${x1.toFixed(1)},${y1.toFixed(1)}`;let v=FM.memo.get(k);if(v!==undefined)return v;
   if(FM.memo.size>2e5)FM.memo.clear();   // 영역을 오래 드래그해도 메모리가 계속 늘지 않게
   const nx=Math.min(12,Math.max(2,Math.ceil((x1-x0)/FM.res)+1)),ny=Math.min(12,Math.max(2,Math.ceil((y1-y0)/FM.res)+1));v=-Infinity;
-  for(let i=0;i<nx&&v===v;i++)for(let j=0;j<ny;j++){const g=FM.ground(x0+(x1-x0)*i/(nx-1),y0+(y1-y0)*j/(ny-1));if(g!==g){v=NaN;break}if(g>v)v=g}
+  for(let i=0;i<nx&&!Number.isNaN(v);i++)for(let j=0;j<ny;j++){const g=FM.ground(x0+(x1-x0)*i/(nx-1),y0+(y1-y0)*j/(ny-1));if(Number.isNaN(g)){v=NaN;break}if(g>v)v=g}
   FM.memo.set(k,v);return v;
 }
 /* 선분 a→b 아래 가장 높은 땅 (좌우 GPS 오차 15m 포함). 모르는 표본은 빼고 계산 */
@@ -960,7 +960,7 @@ function makeGrid(b,s,dims){
     // g: 칸 안 가장 높은 땅 (촬영 폭 판정용), z: 비행 고도 = 설정 고도 + 칸 둘레 한 칸까지 가장 높은 땅
     // (z를 이웃 칸 가운데까지 넓혀 잡아야, 이웃 칸으로 고도를 바꾸며 가는 동안에도 땅에서 설정 고도 이상 떨어짐)
     let g=0,zg=0;
-    if(FM.ground){g=maxGround(x-cw/2,y-ch/2,x+cw/2,y+ch/2);zg=maxGround(x-cw,y-ch,x+cw,y+ch);if(g!==g||zg!==zg){unknown++;g=zg=0}}
+    if(FM.ground){g=maxGround(x-cw/2,y-ch/2,x+cw/2,y+ch/2);zg=maxGround(x-cw,y-ch,x+cw,y+ch);if(Number.isNaN(g)||Number.isNaN(zg)){unknown++;g=zg=0}}
     cells.push({...base,g,z:FM.alt+Math.max(g,zg),visited:false});
   }
   return{bounds:b,cols,rows,cw,ch,cells,areaM2,terr:!FM.ground?"flat":unknown?"partial":"ok",peak:Math.max(0,...cells.map(c=>c.g))};
@@ -1413,7 +1413,7 @@ function syncFM(){
   const o=S.launch,key=o?`${o.lat},${o.lng},${TER.ver}`:"";
   if(key!==TER.key){TER.key=key;FM.memo.clear()}
   if(!o)return;
-  const h=elevAt(o.lat,o.lng,true);if(h!==h)return;   // 출발지 타일이 아직 없으면 평지로
+  const h=elevAt(o.lat,o.lng,true);if(Number.isNaN(h))return;   // 출발지 타일이 아직 없으면 평지로
   const kx=1/(M_LAT*Math.cos(o.lat*Math.PI/180));
   FM.ground=(x,y)=>elevAt(o.lat+y/M_LAT,o.lng+x*kx)-h;
 }
@@ -2112,6 +2112,7 @@ function onTeleMsg(m){
     tele.authFail=true;return teleStatus("bad",(m.msg||"브리지 비밀번호가 맞지 않습니다")+" · 설정에서 비밀번호를 확인한 뒤 ‘연결’을 누르세요");
   }
   if(tele.state==="wait")teleOk();
+  if(m.type==="link"){tele.diag=Object.assign({},m,{at:Date.now()});return}   // 노트북 브리지: 무선기 포트·파이 상태
   const id=Math.round(num(m.id??m.sysid));if(!(id>=1&&id<=MAX_SYSID))return;
   const lat=num(m.lat),lng=num(m.lng??m.lon);
   if(m.type==="ack")return onAck(m,id);
@@ -2124,11 +2125,18 @@ function onTeleMsg(m){
       at:num(m.takenAt)||undefined,img:m.img?bridgeFile(m.img):null});
   }
   if(m.type==="photo")return onBridgePhoto(m,lat,lng);
-  if(lat==null||lng==null||Math.abs(lat)>90||Math.abs(lng)>180||(lat===0&&lng===0))return; // GPS 미수신(0,0) 무시
-  const L=S.live[id]||(S.live[id]={}),prevT=L.t,prevTs=L.ts,prevLL=L.lat!=null?{lat:L.lat,lng:L.lng}:null;
-  const prevMode=L.mode;
-  Object.assign(L,{lat,lng,ts:num(m.ts),alt:num(m.alt),bat:num(m.bat??m.battery),hdg:num(m.hdg??m.heading),spd:num(m.spd??m.speed),
-    mode:String(m.mode||""),armed:typeof m.armed==="boolean"?m.armed:null,t:Date.now()});
+  // 연결 상태: 위치(GPS)가 없어도 하트비트·모드·배터리·GPS 상태는 기록 → '드론 1기 연결 · GPS 대기'로 보임
+  const L=S.live[id]||(S.live[id]={}),relink=!L.linkT||Date.now()-L.linkT>STALE_MS;
+  L.linkT=Date.now();
+  if(m.mode!=null&&m.mode!=="")L.mode=String(m.mode);
+  if(typeof m.armed==="boolean")L.armed=m.armed;
+  const b0=num(m.bat??m.battery),v0=num(m.volt),fx=num(m.fix),sa=num(m.sats);
+  if(b0!=null)L.bat=b0;if(v0!=null)L.volt=v0;if(fx!=null)L.fix=fx;if(sa!=null)L.sats=sa;
+  const noPos=lat==null||lng==null||Math.abs(lat)>90||Math.abs(lng)>180||(lat===0&&lng===0);   // GPS 미수신(0,0 포함)
+  if(relink&&prefs.source==="live")toast(`${droneName(id)} 연결됨${noPos?" · GPS 대기 중"+(L.sats!=null?` (위성 ${L.sats}개)`:""):""}`);
+  if(noPos)return;
+  const prevT=L.t,prevTs=L.ts,prevLL=L.lat!=null?{lat:L.lat,lng:L.lng}:null;
+  Object.assign(L,{lat,lng,ts:num(m.ts),alt:num(m.alt),hdg:num(m.hdg??m.heading),spd:num(m.spd??m.speed),t:Date.now()});   // 모드·시동·배터리는 위에서
   const ms=S.mission,d=ms&&ms.source==="live"&&ms.status==="running"?S.drones.find(x=>x.fi===id-1):null;
   if(d&&d.state!=="landed"){
     const p=toXY(L,S.launch);
@@ -2138,7 +2146,8 @@ function onTeleMsg(m){
       const gap=prevT?(Date.now()-prevT)/1000:0,hop=prevLL?distM(L,prevLL):0;
       const dt=L.ts!=null&&prevTs!=null&&L.ts>prevTs?L.ts-prevTs:gap;
       moveTo(d,p,L.alt,gap*1000>STALE_MS||(dt>0&&hop/dt>40));
-      if(L.mode&&L.mode!==prevMode){
+      if(L.mode&&L.mode!==L.modeLog){   // 위치 없는 메시지로 모드가 먼저 바뀌어도 놓치지 않게 '알린 모드'와 비교
+        L.modeLog=L.mode;
         logEvent(`${d.name} 비행 모드: ${L.mode}`);
         if(/LOITER|HOLD/i.test(L.mode))toast(`${d.name}이(가) 제자리 비행(${L.mode})으로 임무를 멈췄습니다`);
         else if(!/MISSION|TAKEOFF|RTL|LAND|AUTO/i.test(L.mode))toast(`${d.name}이(가) ${L.mode} 모드로 바뀌었습니다 (조종기 수동 조종)`);
@@ -2152,18 +2161,81 @@ function onTeleMsg(m){
   }
   map.invalidate();
 }
+/* GPS 상태 이름 (MAVLink GPS_FIX_TYPE) */
+const GPS_FIX=["GPS 없음","GPS 못 잡음","2D","3D","3D(DGPS)","RTK float","RTK fixed","고정 기지국","PPP"];
+const batText=L=>L.bat!=null?Math.round(L.bat)+"%":L.volt!=null?L.volt.toFixed(1)+" V":"";   // % 모르면 전압
+const gpsText=L=>L.fix==null&&L.sats==null?"–":`${L.fix!=null?(GPS_FIX[L.fix]||L.fix):"GPS"}${L.sats!=null?` · 위성 ${L.sats}개`:""}`;
+/* 노트북 브리지가 1초마다 알려 주는 무선기·파이 상태 → 드론이 안 보일 때 이유 */
+function diagLines(){
+  const d=tele.diag;if(!d||Date.now()-d.at>5000||prefs.source!=="live"||tele.state!=="ok")return null;
+  const out=(d.links||[]).map(l=>{const p=String(l.port||"").split(",")[0];
+    return !l.open?`❌ 무선기 ${p}: ${l.err||"열리지 않음"}`:l.hb_ago!=null&&l.hb_ago<10?`✅ 무선기 ${p}: 기체 신호 받는 중`:`⚠ 무선기 ${p} 열림 · 기체 신호 없음\n   ${l.hint||""}`});
+  if(d.pi)out.push(d.piOk===true?`✅ 파이(${d.pi}): Wi-Fi 연결됨${d.mission?" · 사진 받는 중":" · 경로를 올리면 사진·탐지를 받아 옴"}`
+    :d.piOk===false?`⚠ 파이(${d.pi})에 닿지 않음 — 비행 중이면 정상(착륙 후 다시 받음). 지상이면 노트북·파이가 같은 Wi-Fi인지 확인`:`… 파이(${d.pi}) 확인 중`);
+  else out.push("ℹ 파이 주소 없음 (laptop_bridge.bat의 PI) — 사진·영상은 받지 않습니다");
+  return out;
+}
+const diagShort=()=>{const d=tele.diag,l=d&&Date.now()-d.at<=5000&&(d.links||[])[0];if(!l)return "";return !l.open?"무선기 포트 안 열림":l.hb_ago!=null&&l.hb_ago<10?"":"무선기 · 기체 신호 없음"};
+const linkOf=id=>{const L=S.live[id];return L&&L.linkT&&Date.now()-L.linkT<=STALE_MS?L:null};   // 위치가 없어도 신호가 오는 기체
 function teleUi(){
-  const live=prefs.source==="live",ids=Object.keys(S.live).filter(i=>S.live[i].lat!=null),now=Date.now(),fresh=ids.filter(liveOf);
+  const live=prefs.source==="live",now=Date.now();
+  const ids=Object.keys(S.live).filter(i=>S.live[i].lat!=null||S.live[i].linkT),fresh=ids.filter(liveOf),linked=ids.filter(linkOf);
+  const waitGps=linked.filter(i=>!liveOf(i)).length;   // 연결은 됐지만 GPS 대기
+  fleetLinkUi();
   const pill=$("telePill");pill.hidden=!live;
   pill.className="pill "+(tele.state==="ok"&&fresh.length?"ok":tele.state==="bad"?"bad":"wait");
-  pill.querySelector("span").textContent=tele.state==="ok"?`드론 위치 ${fresh.length}기 수신`:tele.state==="bad"?"드론 위치 끊김":"드론 위치 연결 중";
+  pill.querySelector("span").textContent=tele.state==="bad"?"드론 연결 끊김":tele.state!=="ok"?"드론 연결 중"
+    :fresh.length?`드론 위치 ${fresh.length}기 수신${waitGps?` · ${waitGps}기 GPS 대기`:""}`
+    :waitGps?`드론 ${waitGps}기 연결 · GPS 대기`:(diagShort()||"드론 신호 없음");
   if(S.view!=="settings")return;
   $("teleState").textContent=live?tele.msg:"시뮬레이션 사용 중";
-  $("teleCount").textContent=`${fresh.length}기 (전체 ${ids.length}기)`;
-  $("teleTable").innerHTML=ids.length?`<table><thead><tr><th>기체</th><th class="r">위도·경도</th><th class="r">고도</th><th class="r">배터리</th><th>모드</th><th>최근 메시지</th><th class="r">마지막 수신</th></tr></thead><tbody>${
-    ids.map(i=>{const L=S.live[i],ago=(now-L.t)/1000;return `<tr><td><span class="dot" style="display:inline-block;background:${colorOf(i-1)};margin-right:8px"></span>${esc(droneName(i))}</td><td class="r num">${L.lat.toFixed(5)}, ${L.lng.toFixed(5)}</td><td class="r num">${L.alt!=null?Math.round(L.alt)+" m":"–"}</td><td class="r num">${L.bat!=null?Math.round(L.bat)+"%":"–"}</td><td>${esc(L.mode||"–")}${L.armed?" · 시동":""}</td><td style="white-space:normal;min-width:160px">${esc(L.text||"–")}</td><td class="r num ${ago*1000>STALE_MS?"over":""}">${ago<1?"방금":ago.toFixed(0)+"초 전"}</td></tr>`}).join("")
+  const dl=diagLines();$("teleDiag").hidden=!dl;if(dl)$("teleDiag").textContent="노트북 브리지\n"+dl.join("\n");
+  $("teleCount").textContent=`위치 ${fresh.length}기 · 연결 ${linked.length}기 (전체 ${ids.length}기)`;
+  $("teleTable").innerHTML=ids.length?`<table><thead><tr><th>기체</th><th>연결</th><th>GPS</th><th class="r">위도·경도</th><th class="r">고도</th><th class="r">배터리</th><th>모드</th><th>최근 메시지</th><th class="r">마지막 수신</th></tr></thead><tbody>${
+    ids.map(i=>{const L=S.live[i],last=Math.max(L.t||0,L.linkT||0),ago=(now-last)/1000,on=!!linkOf(i)||!!liveOf(i);
+      return `<tr><td><span class="dot" style="display:inline-block;background:${colorOf(i-1)};margin-right:8px"></span>${esc(droneName(i))}</td><td style="color:${on?"#86efac":"#fca5a5"};font-weight:600">${on?"연결됨":"끊김"}</td><td>${esc(gpsText(L))}</td><td class="r num">${L.lat!=null?L.lat.toFixed(5)+", "+L.lng.toFixed(5):"위치 없음"}</td><td class="r num">${L.alt!=null?Math.round(L.alt)+" m":"–"}</td><td class="r num">${batText(L)||"–"}</td><td>${esc(L.mode||"–")}${L.armed?" · 시동":""}</td><td style="white-space:normal;min-width:160px">${esc(L.text||"–")}</td><td class="r num ${ago*1000>STALE_MS?"over":""}">${ago<1?"방금":ago.toFixed(0)+"초 전"}</td></tr>`}).join("")
   }</tbody></table>`:"";
 }
+$("telePill").onclick=()=>showView("settings","tele");
+/* 드론 관리: 기체별 연결 상태 · 연결 확인 (개별 / 전체) */
+const idHint=id=>prefs.link==="fb"?`드론 번호(droneId) ${id}`:`기체 번호(MAV_SYS_ID) ${id}`;
+function linkState(id){
+  if(prefs.source!=="live")return {c:"#8696b8",t:"시뮬레이션"};
+  if(tele.state!=="ok")return {c:"#8696b8",t:"앱 미연결"};
+  if(liveOf(id))return {c:"#86efac",t:"● 위치 수신"};
+  if(linkOf(id))return {c:"#fcd34d",t:"● GPS 대기"};
+  return {c:"#fca5a5",t:"○ 신호 없음"};
+}
+function fleetLinkUi(){
+  if(S.view!=="fleet")return;
+  document.querySelectorAll("#fleetBody [data-lk]").forEach(el=>{const k=linkState(+el.dataset.lk);if(el.textContent!==k.t){el.textContent=k.t;el.style.color=k.c}});
+}
+const linkLine=id=>{const L=S.live[id]||{},parts=[];
+  if(L.mode)parts.push(L.mode+(L.armed?" · 시동 켜짐":L.armed===false?" · 시동 꺼짐":""));
+  parts.push(L.fix!=null||L.sats!=null?gpsText(L):"GPS 정보 없음");
+  if(liveOf(id))parts.push(`위치 ${L.lat.toFixed(5)}, ${L.lng.toFixed(5)}`+(L.alt!=null?` · 고도 ${Math.round(L.alt)} m`:""));else parts.push("위치 없음(GPS 대기)");
+  if(batText(L))parts.push("배터리 "+batText(L));
+  return parts.join(" · ")};
+let linkChecking=false;
+function checkLinks(ids){
+  if(linkChecking)return;
+  if(prefs.source!=="live")return ask("연결 확인","지금은 시뮬레이션으로 사용 중입니다.\n설정 → 드론 연결에서 '실시간'을 고르고 연결한 뒤 다시 확인하세요.\n\n드론 연결 화면을 열까요?",()=>showView("settings","tele"));
+  if(tele.state!=="ok")return ask("연결 확인",`앱이 ${linkName()}에 연결되어 있지 않습니다${tele.msg?` (${tele.msg})`:""}.\n노트북에서 laptop_bridge.bat가 켜져 있는지, 태블릿과 노트북이 같은 Wi-Fi인지 확인하고 설정 → 드론 연결에서 '연결'을 누르세요.\n\n드론 연결 화면을 열까요?`,()=>showView("settings","tele"));
+  linkChecking=true;const start=Date.now(),btns=[...document.querySelectorAll("[data-chk],#btnChkAll")];
+  btns.forEach(b=>b.disabled=true);toast(ids.length>1?`드론 ${ids.length}기 연결 확인 중…`:`${droneName(ids[0])} 연결 확인 중…`);
+  const fresh=id=>{const L=S.live[id];return !!L&&Math.max(L.linkT||0,L.t||0)>=start};   // 누른 뒤 새 신호가 왔는지
+  const done=()=>{
+    clearInterval(iv);linkChecking=false;btns.forEach(b=>b.disabled=false);fleetLinkUi();
+    const ok=ids.filter(fresh),extra=Object.keys(S.live).map(Number).filter(i=>i>fleet.length&&fresh(i));
+    const lines=ids.map(id=>fresh(id)?`✅ ${droneName(id)}: 연결됨\n   ${linkLine(id)}`:`❌ ${droneName(id)}: 신호 없음 (3초 동안 응답 없음)\n   기체 전원·무선기, ${idHint(id)} 확인`);
+    const dl=ok.length<ids.length&&diagLines();if(dl)lines.push("\n[노트북 브리지 상태]\n"+dl.join("\n"));
+    if(extra.length)lines.push(`\n⚠ 목록에 없는 기체 번호 ${extra.join(", ")}에서 신호가 옵니다. 드론 관리에서 기체를 추가하세요.`);
+    notify(ids.length>1?`전체 연결 확인 · ${ok.length}/${ids.length}기 연결`:`${droneName(ids[0])} 연결 확인`,lines.join("\n"));
+  };
+  const iv=setInterval(()=>{if(ids.every(fresh)||Date.now()-start>3000)done()},200);
+}
+$("fleetBody").addEventListener("click",e=>{const b=e.target.closest("[data-chk]");if(b)checkLinks([+b.dataset.chk])});
+$("btnChkAll").onclick=()=>checkLinks(fleet.map((f,i)=>i+1));   // 위쪽 표시를 누르면 드론 연결 화면 (기체별 GPS·배터리·모드)
 function setSource(src){
   if(isOpen())return toast("임무 중에는 위치 데이터 방식을 바꿀 수 없습니다.");
   if(S.mission)clearMission();
@@ -2185,7 +2257,7 @@ function sendTele(obj){
 }
 function uploadMission(){
   if(!S.plan||!S.drones.length)return toast("먼저 수색 구역을 만들어 주세요.");
-  if(tele.state!=="ok")return toast(`${linkName()}에 연결되어 있지 않습니다. 설정 → 드론 실시간 위치에서 연결해 주세요.`);
+  if(tele.state!=="ok")return toast(`${linkName()}에 연결되어 있지 않습니다. 설정 → 드론 연결에서 연결해 주세요.`);
   const list=S.drones.filter(d=>d.path.length),cap=capability(),shot=S.plan.shot||cap.shot,fresh=d=>liveOf(d.fi+1);
   const nosig=list.filter(d=>!fresh(d)).map(d=>d.name);
   const far=list.filter(d=>fresh(d)&&distM(fresh(d),S.launch)>100).map(d=>`${d.name}(${fmt(distM(fresh(d),S.launch))}m)`);
@@ -2915,7 +2987,7 @@ const videoUrl=()=>{
 };
 function vidUi(){const can=prefs.source==="live"&&!!videoUrl();if($("zVid").hidden===can)$("zVid").hidden=!can;if(!can&&vid.on)vidClose()}
 function vidOpen(){
-  const u=videoUrl();if(!u)return toast("설정 → 드론 실시간 위치에서 영상 주소를 넣어 주세요.");
+  const u=videoUrl();if(!u)return toast("설정 → 드론 연결에서 영상 주소를 넣어 주세요.");
   vid.on=true;$("vidPip").hidden=false;$("zVid").classList.add("on");$("zVid").setAttribute("aria-pressed","true");
   $("vidMsg").hidden=false;$("vidMsg").textContent="영상 연결 중…";clearTimeout(vid.retry);
   $("vidImg").src=u+(u.includes("?")?"&":"?")+"t="+Date.now();   // MJPEG: 연결이 이어지는 동안 계속 바뀜
@@ -3130,9 +3202,11 @@ function renderFleet(){
   $("fleetBody").innerHTML=fleet.map((f,i)=>{
     const cap=capability(f.battery),low=f.battery<=spec.reserve;
     return `<tr><td><label class="tgl"><input type="checkbox" data-en="${i}" ${f.enabled?"checked":""} aria-label="${esc(f.name)} 투입"><span></span></label></td>
-      <td><span class="dot" style="display:inline-block;background:${colorOf(i)};margin-right:8px;vertical-align:middle"></span><input class="tin" style="width:150px" data-nm="${i}" value="${esc(f.name)}" aria-label="기체 이름"></td>
+      <td><span class="dot" style="display:inline-block;background:${colorOf(i)};margin-right:8px;vertical-align:middle"></span><input class="tin" style="width:120px" data-nm="${i}" value="${esc(f.name)}" aria-label="기체 이름"><div data-lk="${i+1}" style="font-size:12.5px;margin:4px 0 0 18px"></div></td>
       <td class="r"><input class="tin num" style="width:84px;text-align:right" type="number" inputmode="numeric" min="0" max="100" data-bt="${i}" value="${f.battery}" aria-label="시작 배터리"> %</td>
-      <td class="r num ${low?"over":""}">${low?"예비 이하":(cap.usable/60).toFixed(1)+"분"}</td></tr>`}).join("");
+      <td class="r num ${low?"over":""}">${low?"예비 이하":(cap.usable/60).toFixed(1)+"분"}</td>
+      <td><button class="btn sm" data-chk="${i+1}" aria-label="${esc(f.name)} 연결 확인">확인</button></td></tr>`}).join("");
+  fleetLinkUi();
   const a=activeFleet();
   $("fleetNote").textContent=`투입 ${a.length}기 · 총 촬영 능력 ${(a.reduce((s,f)=>s+capability(f.battery).area,0)/1e6).toFixed(2)} km². 시작 배터리가 예비 배터리 이하인 기체는 투입되지 않습니다.`;
   updateCapUI();updateButtons();

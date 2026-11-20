@@ -240,7 +240,8 @@
     _emit(msgs) { if (msgs.length && this.onmessage) this.onmessage({ data: JSON.stringify(msgs) }); }
     _flush() {
       const now = Date.now(), out = this.events.splice(0);
-      Object.keys(this.veh).forEach(sid => { const v = this.veh[sid]; if (v.tel.lat != null && now - v.seen < STALE_MS) out.push(Object.assign({}, v.tel)); });
+      // GPS가 아직 없어도(위치 없음) 하트비트가 오면 보냄 → 앱이 '연결됨 · GPS 대기'로 표시
+      Object.keys(this.veh).forEach(sid => { const v = this.veh[sid]; if (now - v.seen < STALE_MS) out.push(Object.assign({}, v.tel)); });
       this._emit(out);
     }
     _v(sid) { return this.veh[sid] || (this.veh[sid] = { comp: 1, autopilot: null, seen: 0, tel: { type: "telemetry", id: sid } }); }
@@ -270,9 +271,12 @@
         if (hdg !== 65535) x.tel.hdg = hdg / 100;
         return;
       }
-      if (m.id === 1 || m.id === 147) {   // SYS_STATUS / BATTERY_STATUS: 남은 배터리 %
-        const r = m.id === 1 ? v.getInt8(30) : v.getInt8(35);
-        if (r >= 0 && this.veh[sid]) this.veh[sid].tel.bat = r;
+      if (m.id === 1 || m.id === 147) {   // SYS_STATUS / BATTERY_STATUS: 남은 배터리 %, 전압
+        const r = m.id === 1 ? v.getInt8(30) : v.getInt8(35), x = this.veh[sid];
+        if (!x) return;
+        if (r >= 0) x.tel.bat = r;
+        const mv = m.id === 1 ? v.getUint16(14, true) : 0;
+        if (mv > 0 && mv < 65535) x.tel.volt = Math.round(mv / 10) / 100;
         return;
       }
       if (m.id === 24) {   // GPS_RAW_INT: 위성 수·고정 상태 (안내용)
