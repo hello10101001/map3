@@ -3652,7 +3652,8 @@ const windSync=()=>{if(document.activeElement!==$("wSpeed"))$("wSpeed").value=sp
    출발지를 정할 때·30분마다 자동. 못 받으면 한 번 알림 + 직접 입력 안내, 2분마다 조용히 다시 시도. 직접 고친 값은 덮어쓰지 않음 */
 const WX={at:0,ll:null,busy:false,src:"",failed:false,failSaid:false,manual:false,retry:0};
 async function fetchWind(){
-  const o=S.launch;if(!o||isRunning()||WX.busy)return;
+  const o=S.launch;if(!o||WX.busy)return;
+  if(S.mission||S.upload){if(WX.failed)retryWind();return}   // 경로를 올렸거나 임무가 열려 있으면 계획을 바꾸지 않음 (올린 경로가 무효가 됨)
   if(WX.manual&&WX.ll&&distM(WX.ll,o)<2000)return;   // 직접 입력한 바람: 출발지를 2km 넘게 옮기기 전까지 그대로
   if(!WX.failed&&WX.ll&&distM(WX.ll,o)<2000&&Date.now()-WX.at<30*60e3)return;   // 2km·30분 안에 받은 적 있으면 그대로
   WX.busy=true;clearTimeout(WX.retry);if(!WX.failed)$("wNote").textContent="출발지 날씨에서 바람을 확인하는 중…";
@@ -3680,9 +3681,10 @@ async function fetchWind(){
       const msg=`출발지 날씨에서 바람을 받아 오지 못했습니다${e&&e.name==="AbortError"?" (응답 없음)":""}. 태블릿이 인터넷에 연결되어 있지 않을 수 있습니다.\n\n'현장 바람'의 풍속(m/s)과 불어오는 쪽을 직접 입력해 주세요. 바람이 강하면 비행 시간 계산이 달라집니다.`;
       if($("confirm").hidden)notify("바람 확인 불가",msg);else toast("바람 확인 불가 — 현장 바람을 직접 입력해 주세요.");   // 다른 확인 창이 열려 있으면 덮지 않음
     }
-    WX.retry=setTimeout(fetchWind,120e3);   // 2분마다 조용히 다시
+    retryWind();
   }finally{WX.busy=false}
 }
+function retryWind(){clearTimeout(WX.retry);WX.retry=setTimeout(fetchWind,120e3)}   // 못 받았으면 2분마다 조용히 다시
 setInterval(fetchWind,30*60e3);   // 30분마다 새 날씨
 $("wSpeed").onchange=$("wDir").onchange=()=>{
   Object.assign(WX,{manual:true,failed:false,ll:S.launch?{...S.launch}:null});clearTimeout(WX.retry);   // 직접 고치면 자동으로 덮어쓰지 않음 (출발지를 2km 넘게 옮기면 다시 확인)
