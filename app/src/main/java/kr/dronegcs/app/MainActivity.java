@@ -121,6 +121,7 @@ public class MainActivity extends Activity {
             public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest req) {
                 Uri u = req.getUrl();
                 if (HOST.equals(u.getHost())) return false;
+                if (!req.isForMainFrame()) return false;  // 앱 안의 작은 화면(열화상 칸)은 앱 안에서 열기
                 try { startActivity(new Intent(Intent.ACTION_VIEW, u)); } catch (Exception ignored) { }
                 return true;  // 외부 링크는 기본 브라우저로
             }

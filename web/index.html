@@ -69,14 +69,6 @@ header.top,nav.rail,.view.page,.side,.mapwrap>:not(canvas),.sheet,.confirm,.toas
 .mbtn{width:48px;height:48px;border-radius:10px;border:1px solid var(--line);background:#0b1630ee;display:grid;place-items:center;font-size:22px}
 .mbtn svg{width:22px;height:22px}
 .mbtn.on{background:var(--accent);border-color:var(--accent);color:#fff}
-/* 드론 실시간 영상 (파이 pi_camera.py의 /video) */
-.vidpip{position:absolute;left:72px;top:64px;z-index:6;width:320px;max-width:calc(100% - 84px);background:#000;border:1px solid var(--line);border-radius:12px;overflow:hidden;box-shadow:0 6px 24px #0008}
-.vidpip.big{width:640px}
-.vidpip img{display:block;width:100%;aspect-ratio:4/3;object-fit:contain;background:#000}
-.vidpip .vbar2{display:flex;align-items:center;gap:6px;padding:6px 8px;background:#0b1630ee;font-size:13px}
-.vidpip .vbar2 b{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.vidpip .vbar2 button{padding:4px 10px;border-radius:8px;border:1px solid var(--line);background:var(--panel2)}
-.vidpip .vmsg{position:absolute;left:0;right:0;top:40%;text-align:center;color:#cbd5e1;font-size:13px;padding:0 10px}
 .sethead{display:flex;align-items:center;gap:6px}
 .setback{width:40px;height:40px;border-radius:10px;border:1px solid var(--line);background:var(--panel);color:var(--fg);font-size:24px;line-height:1;cursor:pointer;display:grid;place-items:center;padding:0 0 3px}
 .setmenu{display:flex;flex-direction:column;gap:18px;max-width:760px}
@@ -209,7 +201,10 @@ td.r,th.r{text-align:right}
 .sheet-b{flex:1;overflow-y:auto;padding:16px 16px calc(20px + env(safe-area-inset-bottom,0px))}
 .thumbs{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
 .thumb{padding:0;border:1px solid var(--line);border-radius:10px;overflow:hidden;background:var(--panel2);text-align:left}
-.thumb img{display:block;width:100%;aspect-ratio:4/3;object-fit:cover;background:#0a1428}
+.lnk{margin-left:4px;padding:2px 8px;border-radius:6px;border:1px solid #3b82f6;background:transparent;color:#93c5fd;font-size:12px;cursor:pointer}
+.thumb{position:relative}
+.thumb img{display:block;width:100%;aspect-ratio:4/3;object-fit:contain;background:#000}   /* 북쪽 위로 돌린 사진(세로·기울어짐)도 잘리지 않게 */
+.thumb .nup{position:absolute;right:6px;top:6px;padding:1px 6px;border-radius:6px;background:#000a;color:#fff;font:700 11px/1.5 sans-serif}
 .thumb span{display:block;padding:7px 9px;font-size:12px;color:var(--muted)}
 .thumb span b{color:var(--fg);font-weight:600}
 .viewer{position:fixed;inset:0;z-index:80;background:#000e;display:grid;grid-template-rows:minmax(0,1fr) auto}
@@ -327,13 +322,7 @@ td.r,th.r{text-align:right}
             <button class="mbtn" id="zHome" aria-label="출발지로 이동"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="6"/><path d="M12 1v5M12 18v5M1 12h5M18 12h5"/></svg></button>
             <button class="mbtn" id="zFit" aria-label="수색 영역 전체 보기"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg></button>
             <button class="mbtn" id="zHeat" aria-label="칸별 평균 온도 열지도 보기" aria-pressed="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 13.5V5a2 2 0 1 1 4 0v8.5a4 4 0 1 1-4 0Z"/><path d="M12 9v7" stroke-linecap="round"/></svg></button>
-            <button class="mbtn" id="zVid" aria-label="드론 실시간 영상 보기" aria-pressed="false" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="6" width="13" height="12" rx="2"/><path d="m16 10 5-3v10l-5-3"/></svg></button>
             <button class="mbtn" id="zType" aria-label="지도 종류 바꾸기"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m12 3 9 5-9 5-9-5 9-5Z"/><path d="m3 13 9 5 9-5"/></svg></button>
-          </div>
-          <div class="vidpip" id="vidPip" hidden>
-            <img id="vidImg" alt="드론 실시간 영상">
-            <div class="vmsg" id="vidMsg">영상 연결 중…</div>
-            <div class="vbar2"><b>드론 영상</b><button id="vidBig">크게</button><button id="vidClose" aria-label="영상 닫기">✕</button></div>
           </div>
           <div class="locmsg" id="locMsg" aria-live="polite"><b>현재 위치 확인 중…</b></div>
           <div class="alerts" id="alerts" aria-live="assertive" aria-label="열화상 탐지 알림"></div>
@@ -384,6 +373,7 @@ td.r,th.r{text-align:right}
             <p class="note" id="noFlyNote"></p>
             <div class="airlist" id="airList"></div>
             <h4>현장 바람</h4>
+            <p class="note" id="wNote" style="margin:4px 0 8px"></p>
             <div class="row2">
               <label class="lbl">풍속 (m/s)<input class="tin num" id="wSpeed" type="number" inputmode="decimal" min="0" max="20" step="0.5"></label>
               <label class="lbl">불어오는 쪽<select class="tin" id="wDir"><option value="0">북풍</option><option value="45">북동풍</option><option value="90">동풍</option><option value="135">남동풍</option><option value="180">남풍</option><option value="225">남서풍</option><option value="270">서풍</option><option value="315">북서풍</option></select></label>
@@ -477,13 +467,13 @@ td.r,th.r{text-align:right}
             <h4>계산 결과 (배터리 100% 기준)</h4>
             <dl class="kv">
               <dt>지상 촬영 폭</dt><dd class="num" id="cFoot">–</dd>
-              <dt>스캔 라인 간격</dt><dd class="num" id="cSpace">–</dd>
+              <dt>스캔 라인 간격 (좁은 쪽 기준)</dt><dd class="num" id="cSpace">–</dd>
               <dt>사진 촬영 간격</dt><dd class="num" id="cShot">–</dd>
               <dt>실사용 비행 시간</dt><dd class="num" id="cUse">–</dd>
               <dt>최대 촬영 경로</dt><dd class="num" id="cPath">–</dd>
               <dt>1기당 촬영 면적</dt><dd class="num" id="cArea" style="color:#93c5fd;font-weight:600">–</dd>
             </dl>
-            <p class="note">촬영 면적 = 라인 간격 × 속도 × 실사용 비행 시간. 실사용 시간 = 최대 비행 시간 × (시작 배터리 − 예비 배터리). 출발지와 구역 사이 이동 거리는 구역 배정 때 따로 뺍니다.</p>
+            <p class="note">줄 간격·사진 간격은 카메라와 열화상 중 좁은 쪽으로 정해 열화상도 빈틈없이 찍힙니다 (열화상 세로 화각은 가로의 35/55, MLX90640 기준). 촬영 면적 = 라인 간격 × 속도 × 실사용 비행 시간. 실사용 시간 = 최대 비행 시간 × (시작 배터리 − 예비 배터리). 출발지와 구역 사이 이동 거리는 구역 배정 때 따로 뺍니다.</p>
           </section>
         </div>
       </section>
@@ -544,7 +534,6 @@ td.r,th.r{text-align:right}
               <label>연결 방식<select id="sLink"><option value="usb">텔레메트리 무선기 (태블릿 USB에 직접)</option><option value="ws">브리지 · Wi-Fi (gcs_bridge.py)</option><option value="fb">Firebase (드론 LTE 직접)</option></select></label>
               <label id="lbBaud">무선기 속도<select id="sBaud"><option value="57600">57600 (SiK 기본)</option><option value="115200">115200</option><option value="38400">38400</option></select></label>
               <label id="lbWsUrl"><span id="tWsUrl">브리지 주소</span><input id="sWsUrl" type="url" inputmode="url" autocomplete="off" spellcheck="false" placeholder="ws://127.0.0.1:8766" style="font-size:14px"></label>
-              <label id="lbVideo">드론 영상 주소<input id="sVideoUrl" type="url" autocomplete="off" spellcheck="false" placeholder="비우면 자동: http://<파이 IP>:8080/video" style="font-size:14px"></label>
               <label id="lbWsToken"><span id="tWsToken">브리지 비밀번호</span><input id="sWsToken" type="password" autocomplete="off" spellcheck="false" placeholder="브리지를 --token으로 켰을 때" style="font-size:14px"></label>
             </div>
             <div class="row2" style="margin-top:12px">
@@ -598,7 +587,7 @@ td.r,th.r{text-align:right}
               <label>고온 열원 기준 (°C)<input id="sFireC" type="number" inputmode="decimal" min="40" max="300" step="1"></label>
             </div>
             <div class="stepper" style="margin-top:14px"><span>탐지 시 진동</span><label class="tgl"><input type="checkbox" id="sVibe"><span></span></label></div>
-            <p class="note">기준 온도보다 낮게 들어온 탐지는 표시하지 않습니다. 고온 열원 기준 이상이면 ‘고온 열원(화재 의심)’, 그 아래는 ‘인명 추정(체온대)’으로 나눕니다. 경로를 업로드하면 기준 온도가 Firebase 임무 문서(thermalMinC)에도 기록되어 드론이 같은 기준을 쓸 수 있습니다.</p>
+            <p class="note">드론 라즈베리파이는 <b>주변보다 3°C 이상 따뜻한 점</b>을 탐지로 보내고, 앱에는 열화상 센서가 <b>실제로 잰 온도</b>를 그대로 보여 줍니다 (높이 날수록 사람은 화소보다 작아 체온보다 낮게 잴 수 있음). 이런 탐지에는 기준 온도를 쓰지 않고, 고온 열원 기준 이상만 ‘고온 열원(화재 의심)’으로 나눕니다. 기준 온도는 시뮬레이션·Firebase처럼 주변 온도 차이가 없는 탐지에 씁니다 (그보다 낮으면 표시 안 함). 경로를 업로드하면 기준 온도가 Firebase 임무 문서(thermalMinC)에도 기록되어 드론이 같은 기준을 쓸 수 있습니다.</p>
           </section>
           <section class="card" data-sp="map">
             <h3>지도 · 시뮬레이션</h3>
@@ -695,12 +684,13 @@ const store={
   set(k,v){try{localStorage.setItem("gcs."+k,JSON.stringify(v));return true}catch(e){return false}},
   del(k){try{localStorage.removeItem("gcs."+k)}catch(e){}}
 };
-const DEFAULT_SPEC={flight:20,reserve:20,speed:8,climb:3,descent:1.5,wind:0,windDir:0,alt:100,fov:82,tfov:57,overlap:30,fwd:70,photoMB:8};   // 상승·하강 속도 = PX4 기본값 (MPC_Z_V_AUTO_UP/DN)
-const DEFAULT_PREFS={uiScale:1,mapType:"sat",mult:30,fallback:{lat:33.4996,lng:126.5312},wake:true,targets:true,source:"sim",wsUrl:"ws://127.0.0.1:8766",wsToken:"",link:"ws",baud:57600,videoUrl:"",airKey:"",airDomain:"",airOn:true,fbConfig:"",fbEmail:"",thermalMin:34,fireC:45,vibe:true};
+const DEFAULT_SPEC={flight:20,reserve:20,speed:8,climb:3,descent:1.5,wind:0,windDir:0,alt:100,fov:82,tfov:55,overlap:30,fwd:70,photoMB:8};   // 상승·하강 속도 = PX4 기본값 (MPC_Z_V_AUTO_UP/DN)
+const DEFAULT_PREFS={uiScale:1,mapType:"sat",mult:30,fallback:{lat:33.4996,lng:126.5312},wake:true,targets:true,source:"sim",wsUrl:"ws://127.0.0.1:8766",wsToken:"",link:"ws",baud:57600,airKey:"",airDomain:"",airOn:true,fbConfig:"",fbEmail:"",thermalMin:34,fireC:45,vibe:true};
 const STALE_MS=5000,MIN_ALT=10; // 5초간 위치가 안 오면 신호 끊김, 10m 미만 고도는 촬영으로 안 침
 const newDrone=i=>({name:"드론 "+(i+1),enabled:true,battery:100});
 const defaultFleet=()=>Array.from({length:4},(_,i)=>newDrone(i));
 const spec=Object.assign({},DEFAULT_SPEC,store.get("spec",{}));
+if(spec.tfov===57)spec.tfov=55;   // 예전 기본값 57° → MLX90640 BAA 실제 화각 55° (파이 config.env HFOV와 같게)
 const prefs=Object.assign({},DEFAULT_PREFS,store.get("prefs",{}));
 delete prefs.noFly;   // 예전 ‘직접 그린 금지구역’ (기능을 뺌)
 let fleet=store.get("fleet",null);
@@ -716,10 +706,12 @@ const mmss=t=>{t=Math.max(0,Math.floor(t));return String(Math.floor(t/60)).padSt
 const esc=s=>String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 let toastT;
 function toast(t){const el=$("toast");el.textContent=t;el.hidden=false;clearTimeout(toastT);toastT=setTimeout(()=>el.hidden=true,2800)}
-function ask(title,text,yes,only){   // only: 확인 버튼만 있는 알림
+function ask(title,text,yes,only,opt={}){   // only: 확인 버튼만 있는 알림. opt {yes:"글자", no:"글자", onNo:함수}
   $("cfTitle").textContent=title;$("cfText").textContent=text;$("confirm").hidden=false;$("cfNo").hidden=!!only;
-  $("cfYes").onclick=()=>{$("confirm").hidden=true;$("cfNo").hidden=false;yes&&yes()};
-  $("cfNo").onclick=()=>{$("confirm").hidden=true};
+  $("cfYes").textContent=opt.yes||"확인";$("cfNo").textContent=opt.no||"취소";
+  const close=()=>{$("confirm").hidden=true;$("cfNo").hidden=false};
+  $("cfYes").onclick=()=>{close();yes&&yes()};
+  $("cfNo").onclick=()=>{close();opt.onNo&&opt.onNo()};
 }
 const notify=(title,text)=>ask(title,text,null,true);
 const downloadCsv=(name,rows)=>download(name,"\ufeff"+rows.map(r=>r.map(v=>`"${String(v).replace(/"/g,'""')}"`).join(",")).join("\r\n"),"text/csv;charset=utf-8");   // 엑셀에서 한글이 깨지지 않게 BOM
@@ -751,7 +743,8 @@ const unmerc=(x,y,s)=>({lat:180/Math.PI*Math.atan(Math.sinh(Math.PI-2*Math.PI*y/
 
 /* ====================== 지도 엔진 (캔버스, 외부 라이브러리 없음) ====================== */
 const TILES={
-  sat:{url:(z,x,y)=>`https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/${z}/${y}/${x}`,attr:"Esri World Imagery",max:19},
+  // blankTile=false: 사진이 없는 확대 단계면 회색 'Map data not yet available' 대신 '없음'(404) → 앱이 덜 확대된 사진을 키워서 채움
+  sat:{url:(z,x,y)=>`https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/${z}/${y}/${x}?blankTile=false`,attr:"Esri World Imagery",max:19},
   osm:{url:(z,x,y)=>`https://tile.openstreetmap.org/${z}/${x}/${y}.png`,attr:"© OpenStreetMap contributors",max:19}
 };
 function createMap(canvas){
@@ -791,7 +784,8 @@ function createMap(canvas){
       t.img.onload=()=>{t.ok=true;E.invalidate()};
       t.img.onerror=()=>{
         if(t.img.crossOrigin){t.img.removeAttribute("crossorigin");t.img.src=TILES[E.type].url(z,x,y);return} // CORS를 안 주는 서버면 일반 방식으로
-        setTimeout(()=>cache.delete(key),15000); // 실패한 타일은 15초 뒤 다시 받음
+        t.missing=true;E.invalidate();   // 이 확대 단계에 사진 없음(또는 통신 실패) → 덜 확대된 사진으로 채움
+        setTimeout(()=>cache.delete(key),60000); // 1분 뒤 다시 받아 봄
       };
       t.img.src=TILES[E.type].url(z,x,y);cache.set(key,t);
       if(cache.size>600)cache.delete(cache.keys().next().value);
@@ -810,10 +804,14 @@ function createMap(canvas){
       const sx=(tx*TS-c[0])*sc+E.w/2,sy=(ty*TS-c[1])*sc+E.h/2,wx=((tx%n)+n)%n;
       const t=tile(tz,wx,ty);
       if(t.ok){ctx.drawImage(t.img,sx,sy,size+.5,size+.5);continue}
-      // 상위 줌 타일로 임시 채우기
-      if(tz>0){const p=cache.get(E.type+"/"+(tz-1)+"/"+(wx>>1)+"/"+(ty>>1));
-        if(p&&p.ok){ctx.drawImage(p.img,(wx&1)*128,(ty&1)*128,128,128,sx,sy,size+.5,size+.5);continue}}
-      ctx.strokeRect(sx+.5,sy+.5,size,size);
+      // 아직 없거나 이 단계 사진이 없음: 덜 확대된 타일(최대 6단계 위)의 해당 부분을 키워서 채움
+      let filled=false;
+      for(let k=1;k<=Math.min(6,tz)&&!filled;k++){
+        const px=wx>>k,py=ty>>k,key=E.type+"/"+(tz-k)+"/"+px+"/"+py,p=t.missing?tile(tz-k,px,py):cache.get(key);   // 사진이 없는 곳이면 위 단계를 받아 옴
+        if(p&&p.ok){const f=TS/2**k;ctx.drawImage(p.img,(wx-(px<<k))*f,(ty-(py<<k))*f,f,f,sx,sy,size+.5,size+.5);filled=true}
+        else if(!p||!p.missing)break;   // 위 단계가 아직 오는 중이면 기다림 (없음이면 한 단계 더 위로)
+      }
+      if(!filled)ctx.strokeRect(sx+.5,sy+.5,size,size);
     }
     E._c=proj(E.lat,E.lng,E.z);
     if(E.overlay)E.overlay(ctx,E);
@@ -876,16 +874,16 @@ map.setCenter(prefs.fallback.lat,prefs.fallback.lng,14);
 
 /* ====================== 촬영 능력 계산 ====================== */
 function capability(battery=100){
-  const foot=2*spec.alt*Math.tan(spec.fov/2*Math.PI/180);
-  const spacing=foot*(1-spec.overlap/100);
-  const shot=foot*.75*(1-spec.fwd/100); // 4:3 센서, 진행 방향 촬영 폭 = 가로 폭 × 0.75
+  // 땅에 찍히는 폭: 카메라(4:3, 진행 방향 = 가로 폭 × 0.75)와 열화상(MLX90640: 가로 55° × 세로 35°, 위쪽 = 진행 방향)
+  const fw=a=>2*spec.alt*Math.tan(a/2*Math.PI/180);
+  const foot=fw(spec.fov),tfoot=fw(spec.tfov),tfootV=fw(spec.tfov*35/55);
+  // 줄 간격·사진 간격은 둘 중 좁은 쪽 → 열화상도 줄 사이·사진 사이가 비지 않음 (사람 찾기는 열화상이 핵심)
+  const spacing=Math.min(foot,tfoot)*(1-spec.overlap/100);
+  const shot=Math.min(foot*.75,tfootV)*(1-spec.fwd/100);
   const usable=Math.max(0,spec.flight*60*(battery-spec.reserve)/100);
   // 촬영·이동에 쓸 수 있는 거리: 이륙 상승·착륙 하강·가감속·착륙 마무리 시간을 뺌 (평지 기준, FM 모형과 같은 값: 가감속 3m/s², 착륙 10초)
   const path=Math.max(0,usable-spec.alt/spec.climb-spec.alt/spec.descent-spec.speed-10)*spec.speed;
-  // 열화상 카메라 (4:3 가정): 재촬영 때 이 화각으로 칸을 다시 나눔. 줄 간격·촬영 간격은 일반 카메라와 열화상 중 좁은 쪽
-  const tfoot=2*spec.alt*Math.tan(spec.tfov/2*Math.PI/180);
-  const tspacing=Math.min(spacing,tfoot*(1-spec.overlap/100)),tshot=Math.min(shot,tfoot*.75*(1-spec.fwd/100));
-  return{foot,spacing,shot,usable,path,area:spacing*path,tfoot,tspacing,tshot};
+  return{foot,spacing,shot,usable,path,area:spacing*path,tfoot,tspacing:spacing,tshot:shot};   // tspacing·tshot: 재촬영 칸 나누기 (같은 값)
 }
 const usableFleet=()=>fleet.map((f,i)=>({...f,i})).filter(f=>f.battery>spec.reserve);   // 배터리가 예비보다 많은 기체 (번호 i 포함)
 const activeFleet=()=>usableFleet().filter(f=>f.enabled);
@@ -1467,6 +1465,7 @@ function replan(fit=true){
   else{renderSide();map.invalidate();return}   // 구역 방식을 아직 안 고름 → ‘자동’ 또는 ‘영역 그리기’를 누를 때까지 영역 없음
   const o=S.launch;
   plan.cells.forEach(c=>placeCell(c,plan.cw,plan.ch,o));
+  plan.fov=plan.fov||Math.min(spec.fov,spec.tfov);   // 칸을 찍었는지 판정도 좁은 쪽(보통 열화상) 화각으로
   S.plan=plan;
   S.drones=makeDrones(plan,members);
   renderSide();
@@ -1552,13 +1551,7 @@ map.overlay=(ctx,E)=>{
     tracePoly(ctx,[a,{lat:a.lat,lng:b.lng},b,{lat:b.lat,lng:a.lng}].map(P));ctx.fill();ctx.stroke();ctx.setLineDash([]);
     if(L)drawLoadTag(ctx,P(b),L,E);
   }
-  // 열화상 탐지 지점: 빨간 점 (미확인은 맥박처럼 퍼지는 테두리)
-  if(S.mission)S.mission.detections.forEach(d=>{
-    if(d.status==="false")return;const p=P(d);
-    if(d.status==="new"&&!REDUCE_MOTION){const k=(performance.now()/900)%1;disc(ctx,p,8+k*16,null,`rgba(239,68,68,${1-k})`)}
-    disc(ctx,p,8,"#ef4444","#fff",2.5);
-    if(E.z>=16&&d.temp!=null)haloText(ctx,`${d.temp.toFixed(1)}°C`,p[0]+12,p[1],"#fecaca",`700 ${sf(12)}px sans-serif`,"left");
-  });
+  if(S.mission)drawDets(ctx,E,S.mission.detections,P,true);
   if(S.me){   // 내 위치 (태블릿 GPS): 파란 점 + 오차 범위. 출발지(H)와는 별개이고, 겹치면 H 아래에 깔림
     const p=P(S.me),r=S.me.acc/E.mpp();
     if(r>8&&r<3000)disc(ctx,p,r,"rgba(59,130,246,.12)","rgba(59,130,246,.5)",1);
@@ -1652,7 +1645,7 @@ function boxOf(pp){let l=Infinity,r=-Infinity,t=Infinity,b=-Infinity;for(const q
 /* 지도 탭 / 드래그 */
 map.onTap=ll=>{
   if(S.picking&&!isOpen()){
-    S.picking=false;$("btnPick").classList.remove("warn");$("toast").hidden=true;
+    S.picking=false;launchBtnUi();$("toast").hidden=true;
     setLaunch(ll,"manual");
     return locMsg(`<b>지정한 지점을 출발지로 설정했습니다.</b><br><span class="num">${ll.lat.toFixed(5)}, ${ll.lng.toFixed(5)}</span>`,"good");
   }
@@ -1715,7 +1708,8 @@ const drawHandler={
     clearTimeout(dragCalcT);
     const[a,b]=S.dragRect;S.dragRect=null;S.dragLoad=null;armDraw(false);
     const d=toXY(b,a);
-    if(Math.abs(d.x)<capability().spacing||Math.abs(d.y)<capability().spacing){toast("영역이 너무 작습니다. 스캔 간격보다 크게 드래그해 주세요.");armDraw(true);return}
+    // 스캔 간격보다 작은 영역도 됨: 칸 하나(또는 한 줄)로 가운데를 지나가면 사진 한 장이 영역을 다 덮음. 손가락을 살짝 댄 것(10m 미만)만 무시
+    if(Math.abs(d.x)<10||Math.abs(d.y)<10){toast("영역을 조금 더 크게 드래그해 주세요 (가로·세로 10m 이상).");armDraw(true);return}
     S.drawRect=[a,b];replan(false);
   }
 };
@@ -1924,6 +1918,7 @@ const SRC_KO={record:"불러온 기록의 출발지",drone:"드론 GPS",sim:"시
 function setLaunch(ll,src){
   if(S.mission&&!isOpen())clearMission();   // 끝난 임무·기록을 닫고 (닫을 때 기록의 출발지가 원래대로 돌아가므로 먼저)
   S.launch={lat:ll.lat,lng:ll.lng};S.launchSrc=src;
+  setTimeout(fetchWind,0);   // 출발지 날씨에서 바람 자동 입력
   if(S.mode==="draw"&&S.drawRect)replan(false);else replan(true);
   if(S.view==="settings")renderSettings();
   if(prefs.airOn){clearTimeout(AIR.t);AIR.t=setTimeout(()=>airLoad(),3000)}   // 이 주변 공식 비행금지구역 (이미 받은 범위면 건너뜀). 3초 뒤: 기본 출발지 → GPS처럼 잠깐 바뀌는 출발지로는 받지 않음
@@ -2083,11 +2078,16 @@ const bridgeHttp=()=>(prefs.wsUrl||"").trim().replace(/^ws/i,"http").replace(/(\
 const bridgeFile=rel=>`${bridgeHttp()}/files/${String(rel).split("/").map(encodeURIComponent).join("/")}${prefs.wsToken?"?t="+encodeURIComponent(prefs.wsToken):""}`;
 const viaBridge=()=>prefs.source==="live"&&(prefs.link==="ws"||(prefs.link==="usb"&&/^wss?:\/\//i.test(prefs.wsUrl||"")));   // 무선기 방식: 파이 Wi-Fi 주소가 있으면 사진은 파이에서
 /* 사진 한 장 도착 → 칸 평균 온도에 더함 (Firebase 방식의 fbWatchPhotos와 같은 일) */
+/* 사진의 칸: 칸 번호가 있으면 그대로, 없으면 위치로 찾음 (못 찾으면 -1) */
+function photoCellOf(v,lat,lng){
+  if(Number.isInteger(v.cell))return v.cell;
+  if(lat==null||lng==null||!S.plan)return -1;
+  const q=toXY({lat,lng},S.launch);return cellAt(q.x,q.y);
+}
 function onBridgePhoto(v,lat,lng){
   const m=S.mission,t=num(v.tempAvgC);if(!m||m.source!=="live"||(v.mission&&v.mission!==m.id)||t==null||!v.uid||m.ctempSeen.has(v.uid))return;
   m.ctempSeen.add(v.uid);
-  let ci=Number.isInteger(v.cell)?v.cell:-1;if(ci<0&&lat!=null&&lng!=null&&S.plan){const q=toXY({lat,lng},S.launch);ci=cellAt(q.x,q.y)}
-  addTemp(m,ci,t,Math.max(0,num(v.takenAt)?(v.takenAt-m.started)/1000:m.t));
+  addTemp(m,photoCellOf(v,lat,lng),t,Math.max(0,num(v.takenAt)?(v.takenAt-m.started)/1000:m.t));
   if(S.view==="data")renderData();saveLate(m);
 }
 /* 무선기 방식: 태블릿이 파이의 Wi-Fi에 닿으면(보통 착륙 뒤) 사진(칸 평균 온도)과 탐지 사진을 받아 옴. 10초마다, 안 닿으면 조용히 넘어감 */
@@ -2111,16 +2111,12 @@ setInterval(syncFromPi,10000);
 function onTeleMsg(m){
   if(!m||typeof m!=="object")return;
   if(m.type==="auth"){
-    tele.pi=typeof m.pi==="string"&&/^https?:\/\//.test(m.pi)?m.pi.replace(/\/+$/,""):"";   // 노트북 브리지(--pi)가 알려 준 파이 주소 → 드론 영상
-    if(m.ok){vidUi();return teleOk()}
+    if(m.ok)return teleOk();
     tele.authFail=true;return teleStatus("bad",(m.msg||"브리지 비밀번호가 맞지 않습니다")+" · 설정에서 비밀번호를 확인한 뒤 ‘연결’을 누르세요");
   }
   if(tele.state==="wait")teleOk();
   if(m.type==="link"){tele.diag=Object.assign({},m,{at:Date.now()});return}   // 노트북 브리지: 무선기 포트·파이 상태
-  if(m.type==="status"&&!(num(m.id??m.sysid)>=1)){   // 기체가 아닌 브리지 자체 알림 (예: 파이에 임무 정보를 못 보냄)
-    const t=String(m.text||"").trim(),sev=num(m.sev);if(!t)return;
-    logEvent("브리지: "+t);if(sev==null||sev<=4)toast(t);return;
-  }
+  if(m.type==="status"&&!(num(m.id??m.sysid)>=1))return onStatusText(m,0);   // 기체가 아닌 브리지 자체 알림 (예: 파이에 임무 정보를 못 보냄)
   const id=Math.round(num(m.id??m.sysid));if(!(id>=1&&id<=MAX_SYSID))return;
   const lat=num(m.lat),lng=num(m.lng??m.lon);
   if(m.type==="ack")return onAck(m,id);
@@ -2129,7 +2125,7 @@ function onTeleMsg(m){
     if(lat==null||lng==null||(m.mission&&S.mission&&m.mission!==S.mission.id))return;   // 다른 임무의 탐지(파이에 남아 있던 것)는 거름
     const same=S.mission&&m.uid&&S.mission.detections.find(d=>d.extId==="b:"+m.uid);   // 무선기로 먼저 받은 탐지에 나중에 Wi-Fi로 사진이 옴
     if(same){if(!same.img&&m.img){same.img=bridgeFile(m.img);saveLate(S.mission);if(S.view==="detect")renderDetect()}return}
-    return ingestDetection({droneId:id,lat,lng,temp:num(m.temp??m.tempC),kind:m.kind,conf:num(m.conf),alt:num(m.alt),extId:m.uid?"b:"+m.uid:null,src:"브리지",
+    return ingestDetection({droneId:id,lat,lng,temp:num(m.temp??m.tempC),delta:num(m.deltaC),kind:m.kind,conf:num(m.conf),alt:num(m.alt),extId:m.uid?"b:"+m.uid:null,src:"브리지",
       at:num(m.takenAt)||undefined,img:m.img?bridgeFile(m.img):null});
   }
   if(m.type==="photo")return onBridgePhoto(m,lat,lng);
@@ -2154,13 +2150,21 @@ function onTeleMsg(m){
       const gap=prevT?(Date.now()-prevT)/1000:0,hop=prevLL?distM(L,prevLL):0;
       const dt=L.ts!=null&&prevTs!=null&&L.ts>prevTs?L.ts-prevTs:gap;
       moveTo(d,p,L.alt,gap*1000>STALE_MS||(dt>0&&hop/dt>40));
+      const homing=d.state==="flying"&&/RTL|RETURN|LAND/i.test(L.mode||"");   // 임무 중 복귀·착륙 모드로 바뀜
       if(L.mode&&L.mode!==L.modeLog){   // 위치 없는 메시지로 모드가 먼저 바뀌어도 놓치지 않게 '알린 모드'와 비교
         L.modeLog=L.mode;
+        if(homing)selfReturn(d,L);
         logEvent(`${d.name} 비행 모드: ${L.mode}`);
         if(/LOITER|HOLD/i.test(L.mode))toast(`${d.name}이(가) 제자리 비행(${L.mode})으로 임무를 멈췄습니다`);
         else if(!/MISSION|TAKEOFF|RTL|LAND|AUTO/i.test(L.mode))toast(`${d.name}이(가) ${L.mode} 모드로 바뀌었습니다 (조종기 수동 조종)`);
       }
-      if(d.state==="flying"&&/RTL|RETURN|LAND/i.test(L.mode))d.state="rtb";
+      if(homing)d.state="rtb";
+      // 계획보다 많이 낮게 남: 파이가 사진은 더 자주 찍지만, 줄 사이는 경로가 정해져 있어 빈 띠가 생길 수 있음 → 한 번 알림
+      if(d.state==="flying"&&L.alt!=null&&d.fp&&d.fp.pts.length){
+        const q=d.fp.pts.reduce((b,t)=>Math.hypot(t.x-p.x,t.y-p.y)<Math.hypot(b.x-p.x,b.y-p.y)?t:b),agl=L.alt-(q.z-spec.alt);   // 땅에서 높이 ≈ 지금 고도 − 그 자리 땅 높이
+        if(agl<spec.alt*.8&&!d.lowWarn){d.lowWarn=true;const msg=`${d.name}이(가) 계획(땅에서 ${spec.alt}m)보다 낮게 날고 있습니다 (약 ${Math.round(agl)}m). 사진은 자동으로 더 자주 찍지만 줄 사이에 빈 곳이 생길 수 있습니다.`;toast(msg);logEvent(msg)}
+        else if(agl>spec.alt*.9)d.lowWarn=false;
+      }
       // PX4는 착륙하면 스스로 시동을 끔 → 시동 꺼짐을 착륙으로 봄 (armed가 없으면 고도로 판단)
       const down=L.armed===false||(L.armed==null&&L.alt!=null&&L.alt<2);
       // 30m: 이륙 직후 문제로 바로 내려와도 착륙으로 잡음 (GPS 흔들림보다는 큰 거리)
@@ -2214,9 +2218,17 @@ function linkState(id){
   if(linkOf(id))return {c:"#fcd34d",t:"● GPS 대기"};
   return {c:"#fca5a5",t:"○ 신호 없음"};
 }
-function fleetLinkUi(){
+function fleetLinkUi(){   // 이름 아래 줄: 연결 상태 · 실시간 배터리 (+ 시작 배터리와 다르면 맞추기 버튼)
   if(S.view!=="fleet")return;
-  document.querySelectorAll("#fleetBody [data-lk]").forEach(el=>{const k=linkState(+el.dataset.lk);if(el.textContent!==k.t){el.textContent=k.t;el.style.color=k.c}});
+  const lock=isRunning()||isBetween();
+  document.querySelectorAll("#fleetBody [data-lk]").forEach(el=>{
+    const id=+el.dataset.lk,k=linkState(id),L=S.live[id],on=!!(L&&(linkOf(id)||liveOf(id))),b=on?batText(L):"";
+    const low=on&&L.bat!=null&&L.bat<=spec.reserve,f=fleet[id-1];
+    const sync=on&&L.bat!=null&&f&&!lock&&Math.abs(Math.floor(L.bat)-f.battery)>=5;   // 드론 관리의 시작 배터리와 5% 넘게 다름
+    const h=`<span style="color:${k.c}">${k.t}</span>${b?` · <span style="color:${low?"#fca5a5":"var(--fg)"};font-weight:600;white-space:nowrap">배터리 ${b}${low?" (예비 이하)":""}</span>`:""}`
+      +(sync?` <button class="lnk" data-bsync="${id}" title="실시간 배터리를 시작 배터리로">시작 배터리로</button>`:"");
+    if(el.dataset.h!==h){el.dataset.h=h;el.innerHTML=h}
+  });
 }
 const linkLine=id=>{const L=S.live[id]||{},parts=[];
   if(L.mode)parts.push(L.mode+(L.armed?" · 시동 켜짐":L.armed===false?" · 시동 꺼짐":""));
@@ -2242,7 +2254,12 @@ function checkLinks(ids){
   };
   const iv=setInterval(()=>{if(ids.every(fresh)||Date.now()-start>3000)done()},200);
 }
-$("fleetBody").addEventListener("click",e=>{const b=e.target.closest("[data-chk]");if(b)checkLinks([+b.dataset.chk])});
+$("fleetBody").addEventListener("click",e=>{
+  const b=e.target.closest("[data-chk]");if(b)return checkLinks([+b.dataset.chk]);
+  const y=e.target.closest("[data-bsync]");if(!y)return;
+  const id=+y.dataset.bsync,L=S.live[id];if(!L||L.bat==null||!fleet[id-1])return;
+  fleet[id-1].battery=Math.floor(L.bat);fleetChanged();toast(`${fleet[id-1].name} 시작 배터리를 실시간 값 ${fleet[id-1].battery}%로 맞추고 구역을 다시 나눴습니다.`);
+});
 $("btnChkAll").onclick=()=>checkLinks(fleet.map((f,i)=>i+1));   // 위쪽 표시를 누르면 드론 연결 화면 (기체별 GPS·배터리·모드)
 function setSource(src){
   if(isOpen())return toast("임무 중에는 위치 데이터 방식을 바꿀 수 없습니다.");
@@ -2298,12 +2315,27 @@ function confirmTakeoff(){
   const nx=isBetween();
   ask(nx?`${S.mission.round+1}회차 이륙`:"이륙 · 임무 시작",`드론 ${ok.length}기(${ok.map(d=>d.name).join(", ")})가 업로드된 경로로 이륙합니다. 이륙 지점 주변에 사람이 없는지, 조종기로 바로 수동 전환할 수 있는지 확인하세요.`+(bad.length?` 업로드에 실패한 ${bad.map(d=>d.name).join(", ")}은(는) 제외됩니다.`:""),nx?startRound:startMission);
 }
+/* 드론이 스스로 임무를 멈추고 복귀(RTL·착륙): 앱이 보낸 복귀 명령·임무 끝 정상 복귀가 아니면 크게 알림.
+   배터리 때문인지: PX4 배터리 경고 글(2분 안) 또는 배터리가 예비+10% 이하 */
+function selfReturn(d,L){
+  const m=S.mission;if(!m||m.ending||Date.now()-(S.rtlAt||0)<20000)return;
+  const left=d.path.length-d.done;if(left<1)return;   // 맡은 칸을 다 찍고 끝에서 복귀 = 정상
+  const bat=(L.batWarnAt&&Date.now()-L.batWarnAt<120000)||(L.bat!=null&&L.bat<=spec.reserve+10);
+  if(!bat&&left<2)return;
+  const b=L.bat!=null?` (배터리 ${Math.round(L.bat)}%)`:"",msg=bat
+    ?`${d.name}이(가) 배터리가 부족해${b} 임무를 멈추고 출발지로 돌아옵니다. 못 찍은 칸 ${left}칸은 착륙 뒤 배터리를 바꾸고 ‘이어서 하기’로 탐색하세요.`
+    :`${d.name}이(가) 스스로 임무를 멈추고 ${/LAND/i.test(L.mode)?"착륙":"복귀"}합니다 (${L.mode}${b}).${L.text?" 기체 안내: "+L.text:""} 통신 끊김·지오펜스 등 기체 안전 기능일 수 있습니다. 못 찍은 칸 ${left}칸.`;
+  logEvent(msg);buzz();notify(bat?"배터리 부족 · 복귀 중":"임무 중단 · 복귀 중",msg);
+}
 /* PX4 STATUSTEXT: 사전 점검 실패 등. 경고(4) 이상 심각하면 알림 */
-function onStatusText(m,id){
-  const name=droneName(id),text=String(m.text||"").trim(),sev=num(m.sev);if(!text)return;
-  const L=S.live[id]||(S.live[id]={});L.text=text;L.textAt=Date.now();
+function onStatusText(m,id){   // id 0 = 브리지 자체 알림 (항상 화면에 띄움)
+  const text=String(m.text||"").trim(),sev=num(m.sev);if(!text)return;
+  if(!id){logEvent("브리지: "+text);if(sev==null||sev<=4)toast(text);return}
+  const name=droneName(id),L=S.live[id]||(S.live[id]={});L.text=text;L.textAt=Date.now();
+  const batMsg=/battery|배터리/i.test(text)&&/low|critical|emergency|failsafe|return|land|부족|위험/i.test(text);   // PX4 배터리 경고 (복귀 이유 판단에 씀)
+  if(batMsg)L.batWarnAt=Date.now();
   logEvent(`${name}: ${text}`);
-  if(sev!=null&&sev<=4)toast(`${name} · ${text}`);
+  if(batMsg||(sev!=null&&sev<=4))toast(`${name} · ${text}`);
 }
 function onAck(m,id){
   const d=S.drones.find(x=>x.fi===id-1),name=d?d.name:droneName(id),ok=!!m.ok,msg=String(m.msg||"");
@@ -2404,7 +2436,7 @@ function fbWatchPhotos(m){
     snap.docChanges().forEach(c=>{
       if(c.type!=="added"||m.ctempSeen.has(c.doc.id))return;const v=c.doc.data(),t=num(v.tempAvgC);if(t==null)return;
       m.ctempSeen.add(c.doc.id);
-      let ci=Number.isInteger(v.cell)?v.cell:-1;if(ci<0&&num(v.lat)!=null&&num(v.lng)!=null&&S.plan&&m===S.mission){const q=toXY({lat:+v.lat,lng:+v.lng},S.launch);ci=cellAt(q.x,q.y)}
+      const ci=m===S.mission?photoCellOf(v,num(v.lat),num(v.lng)):Number.isInteger(v.cell)?v.cell:-1;
       const at=v.takenAt&&v.takenAt.toDate?(v.takenAt.toDate().getTime()-m.started)/1000:m.t;
       addTemp(m,ci,t,Math.max(0,at));ch=true;
     });
@@ -2418,7 +2450,7 @@ function fbWatchDetections(){
     snap.docChanges().forEach(async ch=>{
       if(ch.type!=="added")return;const v=ch.doc.data(),id=Math.round(num(v.drone));
       if(!(id>=1&&id<=MAX_SYSID)||num(v.lat)==null||num(v.lng)==null)return;
-      const det=ingestDetection({droneId:id,lat:+v.lat,lng:+v.lng,alt:num(v.alt),temp:num(v.tempC??v.temp),conf:num(v.conf),
+      const det=ingestDetection({droneId:id,lat:+v.lat,lng:+v.lng,alt:num(v.alt),temp:num(v.tempC??v.temp),delta:num(v.deltaC),kind:v.kind,conf:num(v.conf),
         at:v.takenAt&&v.takenAt.toDate?v.takenAt.toDate().getTime():Date.now(),extId:"f:"+ch.doc.id,src:"Firebase",img:v.thumbUrl||v.url||null});
       if(det&&!det.img&&v.path&&fb.storage){
         det.img=await fb.storage.ref(v.path).getDownloadURL().catch(()=>null);
@@ -2432,7 +2464,7 @@ function fbWatchDetections(){
 /* ====================== 칸별 사진 ====================== */
 async function cellPhotos(ci){
   const m=S.mission;
-  if(m&&m.source==="sim")return (m.photoByCell.get(ci)||[]).map(p=>({...p,time:new Date(p.abs||m.started+p.t*1000),sim:true}));
+  if(m&&m.source==="sim")return (m.photoByCell.get(ci)||[]).map(p=>({...p,time:new Date(p.abs||m.started+p.t*1000),sim:true,therm:"sim"}));
   if(viaBridge())return bridgePhotos(m,ci);
   if(!fb.db)throw{code:"nofb"};
   const{mid,qc,box}=photoCell(m,ci);if(qc==null)return [];
@@ -2442,7 +2474,7 @@ async function cellPhotos(ci){
   if(!docs.length) // cell 값 없이 올라온 사진: 위도 범위로 찾고 경도는 직접 거름
     docs=(await docsOf(col.where("lat",">=",box.la0).where("lat","<=",box.la1).limit(500))).filter(p=>p.lng>=box.lo0&&p.lng<=box.lo1);
   const url=async p=>p.thumbUrl||p.url||(p.path&&fb.storage?await fb.storage.ref(p.path).getDownloadURL().catch(()=>null):null);
-  return finishPhotos(m,await Promise.all(docs.map(async p=>photoRow(p,p.id,p.takenAt&&p.takenAt.toDate?p.takenAt.toDate():null,await url(p),p.url||null))));
+  return finishPhotos(m,await Promise.all(docs.map(async p=>photoRow(p,p.id,p.takenAt&&p.takenAt.toDate?p.takenAt.toDate():null,await url(p),p.url||null,p.thermalUrl))));
 }
 /* 사진을 찾을 칸: 재촬영 비행 중에는 지도는 잘게 나눈 칸이지만 드론은 원래 임무의 칸 번호로 사진을 올림 → 원래 칸으로 찾음.
    box = 그 칸의 위도·경도 범위 (칸 번호 없이 올라온 사진을 위치로 거를 때) */
@@ -2454,7 +2486,7 @@ function photoCell(m,ci){
   return{mid,qc,box:{la0:Math.min(...la),la1:Math.max(...la),lo0:Math.min(...lo),lo1:Math.max(...lo)}};
 }
 /* 사진 한 장 → 칸 창에 그릴 값 */
-const photoRow=(p,id,time,src,full)=>({id,drone:p.drone,name:droneName(p.drone),lat:p.lat,lng:p.lng,alt:p.alt,hdg:p.hdg,tAvg:num(p.tempAvgC),time,src,full});
+const photoRow=(p,id,time,src,full,therm)=>({id,drone:p.drone,name:droneName(p.drone),lat:p.lat,lng:p.lng,alt:p.alt,hdg:p.hdg,tAvg:num(p.tempAvgC),time,src,full,therm:therm||null,nup:!!p.northUp});   // therm: 같은 순간의 열화상 사진, nup: 파이가 북쪽이 위로 돌려 저장한 사진
 /* 임무가 끝난 뒤 찍힌 사진 = 재촬영 표시, 찍은 순서로 */
 function finishPhotos(m,out){
   if(m&&m.ended)out.forEach(p=>{if(p.time&&p.time>m.ended)p.reshoot=true});
@@ -2471,7 +2503,8 @@ async function bridgePhotos(m,ci){
   }catch(e){throw e.code?e:{code:"bridge",msg:"드론(파이)의 Wi-Fi에 연결되어 있는지 확인하세요."}}finally{clearTimeout(tm)}
   const inCell=p=>p.cell===qc||(p.cell==null&&p.lat>=box.la0&&p.lat<=box.la1&&p.lng>=box.lo0&&p.lng<=box.lo1);
   return finishPhotos(m,list.filter(inCell).map(p=>photoRow(p,p.uid,num(p.takenAt)?new Date(p.takenAt):null,
-    p.thumb?bridgeFile(p.thumb):p.file?bridgeFile(p.file):null,p.file?bridgeFile(p.file):null)));
+    p.thumb?bridgeFile(p.thumb):p.file?bridgeFile(p.file):null,p.file?bridgeFile(p.file):null,
+    p.thermal&&p.thermal!==p.file?bridgeFile(p.thermal):null)));   // 카메라가 없으면 열화상이 곧 사진(file)이라 겹치지 않게
 }
 async function openCell(ci){
   const c=S.plan&&S.plan.cells[ci];if(!c)return;   // 영역이 없어진 뒤(출처 전환 등) 눌러도 안전
@@ -2495,18 +2528,22 @@ async function openCell(ci){
   // 열화상 탐지 이미지를 사진 목록 앞에 붙임
   const dets=(S.mission?S.mission.detections:[]).filter(d=>d.cell===ci&&d.status!=="false").map(d=>({thermal:true,det:d,name:d.drone,lat:d.lat,lng:d.lng,alt:d.alt,time:new Date(d.at),
     sim:S.mission.source==="sim",src:d.img,full:d.img,id:"t"+d.id,cell:ci}));
+  // 사진마다 같은 순간의 열화상 사진을 바로 뒤에 (파이가 찍은 thermal/ 사진)
+  const nPhoto=list.length;
+  list=list.flatMap(p=>p.therm?[p,{...p,src:p.therm,full:p.therm,timg:true,pid:p.id,id:p.id+"-t"}]:[p]);
+  const nTherm=list.length-nPhoto;
   list=dets.concat(list);S.viewList=list;
   if(!list.length){$("shBody").innerHTML=`<div class="empty">이 칸에서 올라온 사진이 아직 없습니다.<br>드론이 사진을 올리면 다시 눌러 확인하세요.</div>`;return}
-  $("shSub").textContent+=`${dets.length?` · 열화상 탐지 ${dets.length}건`:""} · 사진 ${list.length-dets.length}장`;
+  $("shSub").textContent+=`${dets.length?` · 열화상 탐지 ${dets.length}건`:""} · 사진 ${nPhoto}장${nTherm?` · 열화상 ${nTherm}장`:""}`;
   $("shBody").innerHTML=`<div class="thumbs">${list.map((p,i)=>{
     const src=imgOf(p,320);
-    return `<button class="thumb" data-ph="${i}" ${p.thermal?'style="border-color:#ef4444"':""}>${src?`<img loading="lazy" alt="${esc(p.name)} ${p.thermal?"열화상":"촬영"} 사진" src="${esc(src)}">`:`<div class="empty" style="aspect-ratio:4/3;border:0;display:grid;place-items:center">이미지 없음</div>`}
-      <span>${p.thermal?`<b style="color:#fca5a5">열화상 ${p.det.temp!=null?p.det.temp.toFixed(1)+"°C":""}</b> · `:""}<b>${esc(p.name)}</b> · ${p.time?hms(p.time):"시각 없음"}${p.alt!=null?" · "+Math.round(p.alt)+"m":""}${p.tAvg!=null?" · "+p.tAvg.toFixed(1)+"°C":""}${p.reshoot?`<br><b style="color:#93c5fd">재촬영</b>`:""}</span></button>`}).join("")}</div>`;
+    return `<button class="thumb" data-ph="${i}" ${p.thermal?'style="border-color:#ef4444"':p.timg?'style="border-color:#f97316"':""}>${src?`<img loading="lazy" alt="${esc(p.name)} ${p.thermal||p.timg?"열화상":"촬영"} 사진" src="${esc(src)}">${p.nup?'<i class="nup" title="북쪽이 위">N↑</i>':""}`:`<div class="empty" style="aspect-ratio:4/3;border:0;display:grid;place-items:center">이미지 없음</div>`}
+      <span>${p.thermal?`<b style="color:#fca5a5">열화상 ${tempText(p.det)}</b> · `:p.timg?`<b style="color:#fdba74">열화상</b> · `:""}<b>${esc(p.name)}</b> · ${p.time?hms(p.time):"시각 없음"}${p.alt!=null?" · "+Math.round(p.alt)+"m":""}${p.tAvg!=null?" · "+p.tAvg.toFixed(1)+"°C":""}${p.reshoot?`<br><b style="color:#93c5fd">재촬영</b>`:""}</span></button>`}).join("")}</div>`;
 }
 function showPhoto(i){
   const list=S.viewList;if(!list.length)return;S.viewIdx=(i+list.length)%list.length;const p=list[S.viewIdx];
-  $("vImg").src=imgOf(p,1024);$("vImg").alt=`${p.name} ${p.thermal?"열화상":"촬영"} 사진`;
-  $("vMeta").innerHTML=`${p.reshoot?'<b style="color:#93c5fd">재촬영</b> · ':""}<b>${p.thermal?`열화상 탐지 ${p.det.temp!=null?p.det.temp.toFixed(1)+"°C · ":""}`:""}${esc(p.name)}</b> · ${S.viewIdx+1}/${list.length}<br><span class="num">${p.time?hms(p.time):"–"} · ${(+p.lat).toFixed(6)}, ${(+p.lng).toFixed(6)}${p.alt!=null?" · 고도 "+Math.round(p.alt)+"m":""}${p.tAvg!=null?" · 평균 "+p.tAvg.toFixed(1)+"°C":""}</span>`;
+  $("vImg").src=imgOf(p,1024);$("vImg").alt=`${p.name} ${p.thermal||p.timg?"열화상":"촬영"} 사진`;
+  $("vMeta").innerHTML=`${p.reshoot?'<b style="color:#93c5fd">재촬영</b> · ':""}<b>${p.thermal?`열화상 탐지 ${p.det.temp!=null?tempText(p.det)+" · ":""}`:p.timg?"열화상 · ":""}${esc(p.name)}</b> · ${S.viewIdx+1}/${list.length}<br><span class="num">${p.time?hms(p.time):"–"} · ${(+p.lat).toFixed(6)}, ${(+p.lng).toFixed(6)}${p.alt!=null?" · 고도 "+Math.round(p.alt)+"m":""}${p.tAvg!=null?" · 평균 "+p.tAvg.toFixed(1)+"°C":""}</span>`;
   $("viewer").hidden=false;
 }
 /* 칸 재촬영: 끝난 임무(또는 불러온 기록)에서 고른 칸(하나 또는 여러 개)을 한 번 비행으로 다시 찍음.
@@ -2603,9 +2640,10 @@ function simImage(key,w,seed,footer,draw){
   return url;
 }
 /* 가상 열화상: 아이언보우 색, 탐지 지점이 가장 뜨겁게 */
-const simThermal=(d,w)=>simImage("th"+d.id,w,d.id*7919+13,`THERMAL  ${d.drone}  ${d.lat.toFixed(5)}, ${d.lng.toFixed(5)}  MAX ${d.temp!=null?d.temp.toFixed(1):"?"}°C`,(g,w,h,rnd)=>{
+const simThermal=(d,w)=>simImage("th"+d.id,w,d.seed||d.id*7919+13,`THERMAL  ${d.drone}  ${d.lat.toFixed(5)}, ${d.lng.toFixed(5)}  ${d.cool?"AVG":"MAX"} ${d.temp!=null?d.temp.toFixed(1):"?"}°C`,(g,w,h,rnd)=>{
   const bg=g.createLinearGradient(0,0,w,h);bg.addColorStop(0,"#0b0630");bg.addColorStop(1,"#2a0a4a");g.fillStyle=bg;g.fillRect(0,0,w,h);
   for(let i=0;i<60;i++){const x=rnd()*w,y=rnd()*h,r=(10+rnd()*40)*w/640,gr=g.createRadialGradient(x,y,0,x,y,r);gr.addColorStop(0,"rgba(120,30,140,.5)");gr.addColorStop(1,"transparent");g.fillStyle=gr;g.fillRect(x-r,y-r,2*r,2*r)}
+  if(d.cool)return;   // 탐지 없는 칸 사진의 열화상: 뜨거운 점 없음
   const x=w*(.35+rnd()*.3),y=h*(.35+rnd()*.3),r=d.type==="fire"?w/6:w/16,hot=g.createRadialGradient(x,y,0,x,y,r);
   [[0,"#fffbe6"],[.25,"#ffd23f"],[.55,"#ff5a1f"],[.85,"#b0127a"],[1,"transparent"]].forEach(([o,c])=>hot.addColorStop(o,c));
   g.fillStyle=hot;g.beginPath();g.arc(x,y,r,0,7);g.fill();
@@ -2623,7 +2661,9 @@ const simPhoto=(p,w)=>simImage(`ph${p.cell}_${p.id}${p.reshoot?"r":""}`,w,p.cell
     g.strokeStyle="#fff";g.lineWidth=2;g.strokeRect(x-r*2,y-r*2,r*4,r*4)}
 });
 /* 목록·크게 보기에 쓸 이미지 주소 (시뮬레이션이면 가상 이미지 생성) */
-const imgOf=(p,w)=>(p.sim?(p.thermal?simThermal(p.det,w):simPhoto(p,w)):(w>400?(p.full||p.src):p.src))||"";
+const simCellThermal=(p,w)=>{const t=S.plan&&S.plan.cells[p.cell]&&S.plan.cells[p.cell].target;   // 가상: 사진과 같은 순간의 열화상 (표적 칸이면 뜨거운 점)
+  const n=+p.pid||1;return simThermal({id:`c${p.cell}_${n}${p.reshoot?"r":""}`,seed:p.cell*7919+n,drone:p.name,lat:+p.lat,lng:+p.lng,temp:p.tAvg,type:t&&t.type,cool:!t},w)};
+const imgOf=(p,w)=>(p.sim?(p.thermal?simThermal(p.det,w):p.timg?simCellThermal(p,w):simPhoto(p,w)):(w>400?(p.full||p.src):p.src))||"";
 
 /* ====================== 시뮬레이션 ====================== */
 const isRunning=()=>!!S.mission&&S.mission.status==="running";
@@ -2759,7 +2799,7 @@ function askEnd(){
 function returnAndEnd(fly){
   const m=S.mission;m.ending=true;
   if(m.source==="live"){
-    sendTele({type:"rtl",ids:fly.map(d=>d.fi+1)});
+    if(sendTele({type:"rtl",ids:fly.map(d=>d.fi+1)}))S.rtlAt=Date.now();
   }else{
     // 시뮬레이션: 지금 위치에서 (가는 길 능선 위로 올라) 출발지 위 → 수직 착륙. 시간표를 복귀용으로 바꿔 끼움
     const t=m.t-m.roundT0;syncFM();
@@ -2775,7 +2815,7 @@ function returnAndEnd(fly){
 function askRtl(){
   const ids=S.drones.filter(d=>!d.skip&&d.state!=="landed"&&d.state!=="ready").map(d=>d.fi+1);
   if(!ids.length)return toast("비행 중인 드론이 없습니다.");
-  ask("전체 복귀 (RTL)",`비행 중인 드론 ${ids.length}기를 출발지로 복귀시킵니다.`,()=>{if(sendTele({type:"rtl",ids}))logEvent(`전체 복귀 명령 · 드론 ${ids.join(", ")}`)});
+  ask("전체 복귀 (RTL)",`비행 중인 드론 ${ids.length}기를 출발지로 복귀시킵니다.`,()=>{if(sendTele({type:"rtl",ids})){S.rtlAt=Date.now();logEvent(`전체 복귀 명령 · 드론 ${ids.join(", ")}`)}});
 }
 function clearMission(fit=false){
   if(S.reshootCtx&&(!S.mission||S.mission.reshootOf)){restoreAfterReshoot();return}   // 재촬영 준비 취소 → 원래 임무로
@@ -2920,19 +2960,22 @@ function visit(d,c){
     sim(jitterLL(c),33+Math.random()*2.5,35+Math.random()*25);
   }
 }
+/* 탐지 온도 글: 열화상 센서가 실제로 잰 온도 */
+const tempText=d=>d.temp==null?"":`${d.temp.toFixed(1)}°C`;
 /* 모든 탐지(시뮬레이션·브리지·Firebase)가 지나는 한 곳: 기준 온도 검사 → 기록 → 알림·빨간 점·칸 깜박임 */
 function ingestDetection(x){
   const m=S.mission;if(!m||!S.plan)return null;
   if(x.extId&&(m.detections.some(d=>d.extId===x.extId)||m.detIgnore&&m.detIgnore.has(x.extId)))return null;   // 같은 탐지 중복 수신, 재촬영 중 받은 원래 임무의 탐지
-  if(x.temp!=null&&x.temp<prefs.thermalMin)return null;                      // 기준 온도 미만
+  // 파이 탐지(주변 온도 차이 delta 있음)는 이미 '주변보다 3°C 이상'으로 고른 것 → 기준 온도 검사 안 함 (높이 날면 사람도 20°C대로 잼)
+  if(x.delta==null&&x.temp!=null&&x.temp<prefs.thermalMin)return null;      // 기준 온도 미만
   const dr=S.drones.find(d=>d.fi===x.droneId-1),name=dr?dr.name:droneName(x.droneId);
-  const type=x.temp!=null?(x.temp>=prefs.fireC?"fire":"person"):(x.kind==="fire"?"fire":"person");
+  const type=x.kind==="fire"||(x.temp!=null&&x.temp>=prefs.fireC)?"fire":"person";
   const at=x.at||Date.now(),p=toXY(x,S.launch);
-  const det={id:m.detections.length+1,extId:x.extId||null,src:x.src,type,temp:x.temp,conf:x.conf,lat:x.lat,lng:x.lng,alt:x.alt,
+  const det={id:m.detections.length+1,extId:x.extId||null,src:x.src,type,temp:x.temp,delta:x.delta??null,conf:x.conf,lat:x.lat,lng:x.lng,alt:x.alt,
     droneId:x.droneId,drone:name,at,
     cell:cellAt(p.x,p.y),status:"new",dismissed:false,img:x.img||null};
   m.detections.push(det);if(dr)dr.detections++;
-  logEvent(`${name}: ${detType(type).n} 탐지${det.temp!=null?` ${det.temp.toFixed(1)}°C`:""} · ${cellName(det.cell)} (${x.src})`);
+  logEvent(`${name}: ${detType(type).n} 탐지${det.temp!=null?" "+tempText(det):""} · ${cellName(det.cell)} (${x.src})`);
   if(prefs.vibe)try{APP?APP.vibrate("180,80,180"):navigator.vibrate&&navigator.vibrate([180,80,180])}catch(e){}
   renderAlerts();updateBadge();map.invalidate();
   if(S.view==="detect")renderDetect();if(S.view==="data")renderData();
@@ -2947,7 +2990,7 @@ function renderAlerts(){
   if(!list.length){box.innerHTML="";return}
   const show=list.slice(-(innerWidth<601?1:innerWidth<1001?2:3)).reverse(),rest=list.length-show.length;   // 폰은 1건만 (지도를 덜 가리게)
   box.innerHTML=show.map(d=>`<div class="alert" role="alert"><button class="go" data-alert="${d.id}">
-      <span class="t"><span class="rd"></span>${d.type==="fire"?"고온 열원":"인명 추정"}${d.temp!=null?` <span class="temp">${d.temp.toFixed(1)}°C</span>`:""}</span>
+      <span class="t"><span class="rd"></span>${d.type==="fire"?"고온 열원":"인명 추정"}${d.temp!=null?` <span class="temp">${tempText(d)}</span>`:""}</span>
       <span class="m" style="display:block">${esc(d.drone)} · ${cellName(d.cell)} · 출발지에서 ${fmt(distM(d,m.launch))} m · ${hms(d.at)}</span>
     </button><button class="x" data-dismiss="${d.id}" aria-label="알림 닫기">×</button></div>`).join("")
     +`<div class="more">${rest>0?`<button data-go="detect">+${rest}건 더 보기</button>`:""}${list.length>1?`<button data-dismiss="all">모두 닫기</button>`:""}</div>`;
@@ -2980,35 +3023,20 @@ const coverage=()=>{if(!S.plan)return 0;const L=liveCells(S.plan);return L.lengt
 const ST={ready:["대기","#8696b8"],flying:["수색 중","#93c5fd"],rtb:["복귀 중","#fcd34d"],landed:["착륙","#86efac"],lost:["신호 없음","#fca5a5"],wait:["이륙 대기","#8696b8"],skip:["안 감","#8696b8"]};
 function updateCapUI(){
   const c=capability();
-  $("cFoot").textContent=c.foot.toFixed(1)+" m";$("cSpace").textContent=c.spacing.toFixed(1)+" m";$("cShot").textContent=c.shot.toFixed(1)+" m";
+  $("cFoot").textContent=`카메라 ${c.foot.toFixed(1)} m · 열화상 ${c.tfoot.toFixed(1)} m`;$("cSpace").textContent=c.spacing.toFixed(1)+" m";$("cShot").textContent=c.shot.toFixed(1)+" m";
   $("cUse").textContent=(c.usable/60).toFixed(1)+" 분";$("cPath").textContent=(c.path/1000).toFixed(2)+" km";
   $("cArea").textContent=(c.area/1e6).toFixed(2)+" km² ("+fmt(c.area/1e4)+" ha)";
   $("iCap").textContent=(c.area/1e6).toFixed(2)+" km² / "+spec.flight+"분";
 }
 let airListHtml="";
-/* 드론 실시간 영상: 파이 pi_camera.py의 MJPEG (http://<파이>:8080/video). 주소를 비우면 브리지(파이) 주소에서 자동 */
-const vid={on:false,retry:0};
-const videoUrl=()=>{
-  const u=(prefs.videoUrl||"").trim();if(u)return u;
-  if(prefs.link==="ws"&&tele.pi)return tele.pi+"/video";   // 노트북 브리지 방식: 브리지가 알려 준 파이
-  const h=(prefs.wsUrl||"").trim().match(/^wss?:\/\/([^/:]+)/i);
-  return prefs.link!=="fb"&&h&&h[1]!=="127.0.0.1"&&h[1]!=="localhost"?`http://${h[1]}:8080/video`:"";
-};
-function vidUi(){const can=prefs.source==="live"&&!!videoUrl();if($("zVid").hidden===can)$("zVid").hidden=!can;if(!can&&vid.on)vidClose()}
-function vidOpen(){
-  const u=videoUrl();if(!u)return toast("설정 → 드론 연결에서 영상 주소를 넣어 주세요.");
-  vid.on=true;$("vidPip").hidden=false;$("zVid").classList.add("on");$("zVid").setAttribute("aria-pressed","true");
-  $("vidMsg").hidden=false;$("vidMsg").textContent="영상 연결 중…";clearTimeout(vid.retry);
-  $("vidImg").src=u+(u.includes("?")?"&":"?")+"t="+Date.now();   // MJPEG: 연결이 이어지는 동안 계속 바뀜
+/* 출발지 버튼: 지금 출발지를 정한 버튼이 주황색 (지도에서 지정 = 누를 곳을 기다리는 중에도) */
+function launchBtnUi(){
+  const src=S.launch?S.launchSrc:"";
+  $("btnPick").classList.toggle("warn",!!S.picking||src==="manual");
+  $("btnLocate").classList.toggle("warn",!S.picking&&(src==="drone"||src==="sim"||src==="default"));   // default: 내 위치를 못 받아 기본 출발지
 }
-function vidClose(){vid.on=false;clearTimeout(vid.retry);$("vidImg").removeAttribute("src");$("vidPip").hidden=true;$("zVid").classList.remove("on");$("zVid").setAttribute("aria-pressed","false")}
-$("vidImg").onload=()=>{$("vidMsg").hidden=true};
-$("vidImg").onerror=()=>{if(!vid.on)return;$("vidMsg").hidden=false;$("vidMsg").textContent="영상에 연결할 수 없습니다. 파이와 같은 Wi-Fi인지 확인하세요. 3초 뒤 다시 시도…";vid.retry=setTimeout(()=>{if(vid.on)vidOpen()},3000)};
-$("zVid").onclick=()=>vid.on?vidClose():vidOpen();
-$("vidClose").onclick=vidClose;
-$("vidBig").onclick=()=>{const b=$("vidPip").classList.toggle("big");$("vidBig").textContent=b?"작게":"크게"};
 function renderSide(){
-  vidUi();
+  launchBtnUi();
   renderRecPick();
   const p=S.plan;
   if(p){
@@ -3211,7 +3239,7 @@ function renderFleet(){
   $("fleetBody").innerHTML=fleet.map((f,i)=>{
     const cap=capability(f.battery),low=f.battery<=spec.reserve;
     return `<tr><td><label class="tgl"><input type="checkbox" data-en="${i}" ${f.enabled?"checked":""} aria-label="${esc(f.name)} 투입"><span></span></label></td>
-      <td><span class="dot" style="display:inline-block;background:${colorOf(i)};margin-right:8px;vertical-align:middle"></span><input class="tin" style="width:120px" data-nm="${i}" value="${esc(f.name)}" aria-label="기체 이름"><div data-lk="${i+1}" style="font-size:12.5px;margin:4px 0 0 18px"></div></td>
+      <td><span class="dot" style="display:inline-block;background:${colorOf(i)};margin-right:8px;vertical-align:middle"></span><input class="tin" style="width:120px" data-nm="${i}" value="${esc(f.name)}" aria-label="기체 이름"><div data-lk="${i+1}" style="font-size:12.5px;margin:4px 0 0 18px;max-width:150px;white-space:normal;line-height:1.6"></div></td>
       <td class="r"><input class="tin num" style="width:84px;text-align:right" type="number" inputmode="numeric" min="0" max="100" data-bt="${i}" value="${f.battery}" aria-label="시작 배터리"> %</td>
       <td class="r num ${low?"over":""}">${low?"예비 이하":(cap.usable/60).toFixed(1)+"분"}</td>
       <td><button class="btn sm" data-chk="${i+1}" aria-label="${esc(f.name)} 연결 확인">확인</button></td></tr>`}).join("");
@@ -3231,7 +3259,7 @@ function renderDetect(){
   $("detList").innerHTML=list.map(d=>{const t=detType(d.type);
     const stl=STATUS[d.status];
     return `<div class="det"><span class="ic" style="background:${t.c}22;color:${t.c}">${t.s}</span>
-      <div><div class="t">#${d.id} ${t.n}${d.temp!=null?` <span class="temp">${d.temp.toFixed(1)}°C</span>`:""} <span class="st" style="color:${d.status==="ok"?"#86efac":d.status==="false"?"#8696b8":"#fcd34d"};margin-left:6px">${stl}</span></div>
+      <div><div class="t">#${d.id} ${t.n}${d.temp!=null?` <span class="temp">${tempText(d)}</span>`:""} <span class="st" style="color:${d.status==="ok"?"#86efac":d.status==="false"?"#8696b8":"#fcd34d"};margin-left:6px">${stl}</span></div>
       <div class="m num"><span>${esc(d.drone)}</span><span>${hms(d.at)}</span><span>${esc(mine?cellName(d.cell):d.cellName||"–")}</span>${d.conf!=null?`<span>신뢰도 ${d.conf.toFixed(0)}%</span>`:""}<span>출발지에서 ${fmt(distM(d,r.launch))} m</span><span>${d.lat.toFixed(5)}, ${d.lng.toFixed(5)}</span><span>${d.src}</span>${d.dismissed?"<span>알림 닫음</span>":""}</div></div>
       <div class="acts"><button class="btn sm" data-share="${encodeURIComponent(shareText([d],r.launch))}">공유</button>${mine?`<button class="btn sm" data-see="${d.id}">지도</button>${d.status!=="ok"?`<button class="btn sm" data-ok="${d.id}">확인</button>`:""}${d.status!=="false"?`<button class="btn sm ghost" data-no="${d.id}">오탐</button>`:""}`
         :`<button class="btn sm" data-pt="${d.lat},${d.lng}">지도</button>`}</div></div>`}).join("");
@@ -3251,7 +3279,7 @@ function renderData(){
   // 탐지 기록: 지도 알림을 닫아도 모두 남음
   const dl=r?r.detections:[];
   $("detLog").innerHTML=dl.length?`<table><thead><tr><th>#</th><th>시각</th><th>드론</th><th class="r">온도</th><th>판정</th><th>칸</th><th class="r">위도·경도</th><th>상태</th><th>알림</th><th>출처</th></tr></thead><tbody>${
-    dl.slice().reverse().map(d=>`<tr><td class="num">${d.id}</td><td class="num">${hms(d.at)}</td><td>${esc(d.drone)}</td><td class="r temp">${d.temp!=null?d.temp.toFixed(1)+"°C":"–"}</td><td>${detType(d.type).n}</td><td>${esc(d.cellName||cellName(d.cell))}</td><td class="r num">${d.lat.toFixed(5)}, ${d.lng.toFixed(5)}</td><td>${STATUS[d.status]}</td><td>${d.dismissed?`닫음 ${hms(d.dismissedAt)}`:"표시 중"}</td><td>${d.src}</td></tr>`).join("")
+    dl.slice().reverse().map(d=>`<tr><td class="num">${d.id}</td><td class="num">${hms(d.at)}</td><td>${esc(d.drone)}</td><td class="r temp">${d.temp!=null?tempText(d):"–"}</td><td>${detType(d.type).n}</td><td>${esc(d.cellName||cellName(d.cell))}</td><td class="r num">${d.lat.toFixed(5)}, ${d.lng.toFixed(5)}</td><td>${STATUS[d.status]}</td><td>${d.dismissed?`닫음 ${hms(d.dismissedAt)}`:"표시 중"}</td><td>${d.src}</td></tr>`).join("")
   }</tbody></table>`:`<div class="empty">${r?"이 임무에는 탐지 기록이 없습니다.":"아직 탐지 기록이 없습니다."}</div>`;
   const mine=r&&S.mission&&r.id===S.mission.id;   // 내보내기는 지금 앱에 열려 있는 임무만
   $("expCsv").disabled=!mine||!S.mission.detections.length;$("expTemp").disabled=!(r&&r.ctemp&&r.ctemp.length);$("expGeo").disabled=!S.plan||(!!r&&!mine);
@@ -3448,7 +3476,7 @@ function renderSettings(){
     <dt>오류</dt><dd>${S.locError?esc(S.locError):"없음"}</dd>`;
   $("diagHelp").textContent=S.locError?"":"위치가 정상적으로 잡히고 있습니다.";
   const put=(id,v)=>{if(document.activeElement!==$(id))$(id).value=v}; // 입력 중인 칸은 건드리지 않음
-  put("sMapType",prefs.mapType);put("sMult",String(prefs.mult));put("sSource",prefs.source);put("sWsUrl",prefs.wsUrl);put("sWsToken",prefs.wsToken||"");put("sVideoUrl",prefs.videoUrl||"");put("sAirKey",prefs.airKey||"");put("sAirDomain",prefs.airDomain||location.origin);$("sAirOn").checked=!!prefs.airOn;airUi();put("sLink",prefs.link||"ws");linkUi();
+  put("sMapType",prefs.mapType);put("sMult",String(prefs.mult));put("sSource",prefs.source);put("sWsUrl",prefs.wsUrl);put("sWsToken",prefs.wsToken||"");put("sAirKey",prefs.airKey||"");put("sAirDomain",prefs.airDomain||location.origin);$("sAirOn").checked=!!prefs.airOn;airUi();put("sLink",prefs.link||"ws");linkUi();
   put("sHomeLat",prefs.fallback.lat);put("sHomeLng",prefs.fallback.lng);put("sThermal",prefs.thermalMin);put("sFireC",prefs.fireC);
   put("sFbCfg",prefs.fbConfig);put("sFbEmail",prefs.fbEmail);
   Object.entries(TOGGLES).forEach(([id,k])=>$(id).checked=prefs[k]);
@@ -3460,7 +3488,7 @@ function renderSettings(){
 /* ====================== 탐지 위치 공유 ======================
    좌표 + 카카오맵·구글 지도 링크를 문자로 만들어 안드로이드 공유창(문자·카카오톡 등)으로 보냄. 브라우저면 공유 기능 또는 복사 */
 function shareText(list,launch){
-  const one=d=>{const label=`${detType(d.type).n.split(" (")[0]}${d.temp!=null?" "+d.temp.toFixed(1)+"°C":""}`,la=(+d.lat).toFixed(6),lo=(+d.lng).toFixed(6);
+  const one=d=>{const label=`${detType(d.type).n.split(" (")[0]}${d.temp!=null?" "+tempText(d):""}`,la=(+d.lat).toFixed(6),lo=(+d.lng).toFixed(6);
     return `■ ${label} · ${dateKo(d.at)}${launch?` · 출발지에서 ${fmt(distM(d,launch))}m`:""}\n위치 ${la}, ${lo}\n카카오맵 https://map.kakao.com/link/map/${encodeURIComponent(label)},${la},${lo}\n구글지도 https://maps.google.com/?q=${la},${lo}`};
   return `[드론 수색 탐지${list.length>1?` ${list.length}건`:""}]\n`+list.map(one).join("\n\n");
 }
@@ -3519,7 +3547,7 @@ $("btnLocate").onclick=()=>{
   S.launchSrc="none";simLaunchFromMe(true);toast(S.me?"내 위치를 출발지로 정했습니다 (시뮬레이션: 가상 드론이 여기서 출발).":"내 위치를 아직 못 받아 기본 출발지를 씁니다.");
 };
 $("gpsPill").onclick=()=>{if(S.me)map.setCenter(S.me.lat,S.me.lng,Math.max(map.z,16));else locate()};   // 위쪽 ‘내 위치’ 표시를 누르면 내 위치로 이동
-$("btnPick").onclick=()=>{S.picking=!S.picking;$("btnPick").classList.toggle("warn",S.picking);if(S.picking){armDraw(false);toast("출발지로 쓸 지점을 지도에서 눌러 주세요.")}};
+$("btnPick").onclick=()=>{S.picking=!S.picking;launchBtnUi();if(S.picking){armDraw(false);toast("출발지로 쓸 지점을 지도에서 눌러 주세요.")}};
 /* 자동 영역 / 영역 그리기 전환: 띄운 임무·재촬영 준비를 닫음 */
 function setMode(mode){
   if(isOpen())return false;
@@ -3529,7 +3557,7 @@ function setMode(mode){
   return true;
 }
 $("modeAuto").onclick=()=>{if(setMode("auto")){armDraw(false);replan(true)}};
-$("modeDraw").onclick=()=>{if(!S.launch&&!isOpen())return toast("먼저 출발지를 정해 주세요.");if(!setMode("draw"))return;S.drawRect=null;S.picking=false;$("btnPick").classList.remove("warn");armDraw(true);replan(false);toast("지도 위를 드래그해서 영역을 그려 주세요.")};
+$("modeDraw").onclick=()=>{if(!S.launch&&!isOpen())return toast("먼저 출발지를 정해 주세요.");if(!setMode("draw"))return;S.drawRect=null;S.picking=false;launchBtnUi();armDraw(true);replan(false);toast("지도 위를 드래그해서 영역을 그려 주세요.")};
 /* 투입 드론 수: 모자라면 보유 기체를 새로 추가 (제한 없음) */
 function setCount(n){
   n=Math.max(1,n);
@@ -3565,16 +3593,34 @@ $("btnStart").onclick=()=>{
   const m=S.mission;
   if(m&&isRunning())return;
   if(m&&isBetween()){
-    return m.source!=="live"?startRound():liveNext(upState());
+    return batteryGate(()=>m.source!=="live"?startRound():liveNext(upState()));
   }
   if(m)return clearMission();
   const nf=blockingHits();
   if(nf.length)return ask("비행금지구역 경고",`${noFlyText(nf)}과 겹칩니다. 비행 승인 없이 이 구역에서 비행하면 안 됩니다. 승인서를 등록하거나 구역을 고친 뒤 진행하세요. 그래도 진행하시겠습니까?`,startFlow);
   startFlow();
 };
+/* 배터리 미리 확인: 드론마다 이 경로에 필요한 배터리(비행 시간 + 예비) vs 지금 배터리 (실시간이면 드론이 보내 준 실제 값) */
+const needPct=d=>d.cost/spec.speed/(spec.flight*60)*100+spec.reserve;
+function batteryShort(){
+  return S.drones.filter(d=>d.path.length&&!d.skip).map(d=>{
+    const L=prefs.source==="live"&&S.live[d.fi+1],live=!!(L&&L.bat!=null&&linkOf(d.fi+1)),have=live?L.bat:d.battery0;
+    return{d,have,need:needPct(d),live};
+  }).filter(x=>x.have<x.need-.5);
+}
+function batteryGate(next){
+  const sh=S.batAck===S.plan?[]:batteryShort();if(!sh.length)return next();   // 같은 계획에서 '그래도 진행'을 골랐으면 다시 묻지 않음
+  const fix=sh.filter(x=>x.live&&x.have<x.d.battery0-.5);   // 실제 배터리가 드론 관리의 '시작 배터리'보다 적음 → 실제 값으로 다시 나누면 됨
+  ask("배터리 충전량이 부족합니다","",
+    fix.length?()=>{
+      fix.forEach(x=>{fleet[x.d.fi].battery=Math.floor(x.have)});saveAll();if(S.view==="fleet")renderFleet();
+      if(isBetween())prepareNext();else replan(false);
+      toast("실제 배터리로 다시 나눴습니다. 구역을 확인하고 다시 시작해 주세요.");
+    }:()=>showView("fleet"),false,{yes:fix.length?"실제 배터리로 다시 계획":"드론 관리 열기",no:"그래도 진행",onNo:()=>{S.batAck=S.plan;logEvent("배터리 충전량 부족 경고 — 그래도 진행");next()}});
+}
 const liveNext=u=>{if(u==="ok"||u==="partial")confirmTakeoff();else if(u!=="wait")uploadMission()};   // 실시간: 경로 업로드 → 이륙
 function startFlow(){
-  const u=upState(),go=()=>prefs.source!=="live"?startMission():liveNext(u);
+  const u=upState(),go=()=>batteryGate(()=>prefs.source!=="live"?startMission():liveNext(u));
   if(S.plan&&S.drones.length&&!S.drones.some(d=>d.path.length))   // 어느 칸도 갔다 올 수 없음 (이착륙 시간만으로 비행 가능 시간을 거의 다 씀 등)
     return notify("시작할 수 없음",`출발지에서 너무 멀어, 투입 드론의 비행 가능 시간(${(Math.max(0,...S.drones.map(d=>d.usable))/60).toFixed(1)}분)으로는 갔다 올 수 있는 칸이 없습니다. 출발지를 영역 가까이로 옮기거나 배터리를 확인해 주세요.`);
   // 한 번 비행으로 다 못 도는 영역: 처음에 한 번만 묻고, 진행하면 회차 사이에는 ‘이어서 하기’만 누르면 됨
@@ -3602,7 +3648,45 @@ $("speedSeg").querySelectorAll("button").forEach(b=>b.onclick=()=>setMult(+b.dat
 $("btnClearHist").onclick=()=>{if(!history.length)return;ask("이력 전체 삭제",`지난 임무 ${history.length}건을 이 기기에서 지웁니다.`,()=>{history.forEach(h=>dropSaved(h.id));S.recSel=null;history=[];store.set("history",history);renderMission()})};
 
 const windSync=()=>{if(document.activeElement!==$("wSpeed"))$("wSpeed").value=spec.wind;$("wDir").value=String(Math.round(spec.windDir/45)*45%360)};
+/* 바람 자동 입력: 출발지(드론 GPS·지도에서 지정) 날씨에서 비행 고도에 가까운 높이의 바람 (Open-Meteo, 인터넷 필요).
+   출발지를 정할 때·30분마다 자동. 못 받으면 한 번 알림 + 직접 입력 안내, 2분마다 조용히 다시 시도. 직접 고친 값은 덮어쓰지 않음 */
+const WX={at:0,ll:null,busy:false,src:"",failed:false,failSaid:false,manual:false,retry:0};
+async function fetchWind(){
+  const o=S.launch;if(!o||isRunning()||WX.busy)return;
+  if(WX.manual&&WX.ll&&distM(WX.ll,o)<2000)return;   // 직접 입력한 바람: 출발지를 2km 넘게 옮기기 전까지 그대로
+  if(!WX.failed&&WX.ll&&distM(WX.ll,o)<2000&&Date.now()-WX.at<30*60e3)return;   // 2km·30분 안에 받은 적 있으면 그대로
+  WX.busy=true;clearTimeout(WX.retry);if(!WX.failed)$("wNote").textContent="출발지 날씨에서 바람을 확인하는 중…";
+  const h=spec.alt<=45?10:spec.alt<=100?80:120;   // 비행 고도에 가까운 높이 (높을수록 바람이 셈)
+  const url=`https://api.open-meteo.com/v1/forecast?latitude=${o.lat.toFixed(4)}&longitude=${o.lng.toFixed(4)}&current=wind_speed_10m,wind_direction_10m,wind_gusts_10m,wind_speed_${h}m,wind_direction_${h}m&wind_speed_unit=ms&timezone=auto`;
+  try{
+    const ac=new AbortController(),tm=setTimeout(()=>ac.abort(),8000);
+    const r=await fetch(url,{signal:ac.signal,cache:"no-store"}).finally(()=>clearTimeout(tm));
+    if(!r.ok)throw new Error("HTTP "+r.status);
+    const c=(await r.json()).current||{};
+    let sp=num(c["wind_speed_"+h+"m"]),dir=num(c["wind_direction_"+h+"m"]),hh=h;
+    if(sp==null||dir==null){sp=num(c.wind_speed_10m);dir=num(c.wind_direction_10m);hh=10}
+    if(sp==null||dir==null)throw new Error("바람 값 없음");
+    spec.wind=clamp(Math.round(sp*2)/2,0,20);spec.windDir=Math.round(dir/45)*45%360;windSync();saveAll();replan(S.mode==="auto");
+    const was=WX.failed;Object.assign(WX,{at:Date.now(),ll:{...o},failed:false,manual:false});
+    const gust=num(c.wind_gusts_10m),t=String(c.time||"").slice(11,16);
+    WX.src=`날씨(Open-Meteo)${t?" "+t:""} 기준 · 땅에서 ${hh}m 바람 ${sp.toFixed(1)}m/s ${windName(dir)}${gust!=null?` · 돌풍 ${gust.toFixed(1)}m/s`:""}`;
+    $("wNote").textContent=WX.src+" — 현장과 다르면 직접 고치세요.";$("wNote").style.color="";
+    if(was||windStrong())toast(`바람 자동 입력: ${windName(dir)} ${spec.wind}m/s${windStrong()?" — 비행 속도에 비해 강합니다":""}`);
+  }catch(e){
+    WX.failed=true;
+    $("wNote").textContent="바람을 확인하지 못했습니다 (인터넷 없음 등) — 현장 풍속과 바람 방향을 직접 입력해 주세요. 인터넷이 되면 자동으로 다시 넣습니다.";$("wNote").style.color="#fca5a5";
+    if(!WX.failSaid){
+      WX.failSaid=true;
+      const msg=`출발지 날씨에서 바람을 받아 오지 못했습니다${e&&e.name==="AbortError"?" (응답 없음)":""}. 태블릿이 인터넷에 연결되어 있지 않을 수 있습니다.\n\n'현장 바람'의 풍속(m/s)과 불어오는 쪽을 직접 입력해 주세요. 바람이 강하면 비행 시간 계산이 달라집니다.`;
+      if($("confirm").hidden)notify("바람 확인 불가",msg);else toast("바람 확인 불가 — 현장 바람을 직접 입력해 주세요.");   // 다른 확인 창이 열려 있으면 덮지 않음
+    }
+    WX.retry=setTimeout(fetchWind,120e3);   // 2분마다 조용히 다시
+  }finally{WX.busy=false}
+}
+setInterval(fetchWind,30*60e3);   // 30분마다 새 날씨
 $("wSpeed").onchange=$("wDir").onchange=()=>{
+  Object.assign(WX,{manual:true,failed:false,ll:S.launch?{...S.launch}:null});clearTimeout(WX.retry);   // 직접 고치면 자동으로 덮어쓰지 않음 (출발지를 2km 넘게 옮기면 다시 확인)
+  $("wNote").textContent="직접 입력한 바람을 씁니다.";$("wNote").style.color="";
   const v=parseFloat($("wSpeed").value);spec.wind=isFinite(v)?clamp(v,0,20):0;spec.windDir=+$("wDir").value||0;windSync();
   saveAll();replan(S.mode==="auto");
   if(windStrong())toast(`풍속 ${spec.wind}m/s는 비행 속도(${spec.speed}m/s)에 비해 강합니다. 맞바람 구간에서 거의 나아가지 못할 수 있습니다.`);
@@ -3651,9 +3735,8 @@ $("btnRelocate").onclick=()=>{S.me=null;locate()};
 $("btnUseFallback").onclick=()=>{if(isOpen())return toast("임무 중에는 출발지를 바꿀 수 없습니다.");setLaunch(prefs.fallback,"default");toast("기본 출발지를 사용합니다.")};
 $("sMapType").onchange=e=>setMapType(e.target.value);
 $("sSource").onchange=e=>{setSource(e.target.value);renderSettings()};
-$("sWsUrl").onchange=e=>{prefs.wsUrl=e.target.value.trim();saveAll();vidUi()};
+$("sWsUrl").onchange=e=>{prefs.wsUrl=e.target.value.trim();saveAll()};
 $("sWsToken").onchange=e=>{prefs.wsToken=e.target.value;saveAll()};
-$("sVideoUrl").onchange=e=>{prefs.videoUrl=e.target.value.trim();saveAll();if(vid.on)vidOpen()};
 $("sAirKey").onchange=e=>{prefs.airKey=e.target.value.trim();saveAll();AIR.msg="";airUi();airLoad(true)};
 $("sAirDomain").onchange=e=>{prefs.airDomain=e.target.value.trim();saveAll();AIR.msg="";airUi()};
 $("sAirOn").onchange=e=>{prefs.airOn=e.target.checked;saveAll();AIR.ver++;renderSide();map.invalidate();if(prefs.airOn)airLoad()};
@@ -3799,10 +3882,11 @@ function trackData(src){
       if(d.trail.length<2)return;
       trackSlot(tr,d).rounds.push({round:m.round,pts:d.trail,len:trackLen(d.trail),live:d.state!=="landed"&&d.state!=="ready"?d.pos:null});
     });
-    return{...trackHead(m),cur:true,drones:Object.values(tr).sort((a,b)=>a.fi-b.fi)};
+    return{...trackHead(m),cur:true,drones:Object.values(tr).sort((a,b)=>a.fi-b.fi),dets:m.detections};
   }
   const t=store.get("track."+src,null);if(!t)return null;
   t.drones.forEach(d=>d.rounds.forEach(r=>{r.pts=unpackPts(r.pts)}));
+  t.dets=(store.get("mrec."+src,null)||{}).detections||[];   // 지난 임무: 기록에 저장된 탐지
   return t;
 }
 const missionLabel=(started,cur)=>`${dateKo(started)}${cur?" · 진행 중":""}`;
@@ -3840,7 +3924,8 @@ function renderRoutes(fit){
     return `<div class="rv-d ${on?"on":""}"><button class="rv-tg" data-rvt="${d.fi}" aria-pressed="${on}"><span class="dot" style="background:${d.color}"></span>
       <span><span class="nm">${esc(d.name)}</span><small>${(len/1000).toFixed(2)} km · ${d.rounds.length}회 비행${d.rounds.some(r=>r.live)?" · 비행 중":""}</small></span><span class="ck">${on?"✓":""}</span></button></div>`}).join(""):`<div class="empty">아직 이동한 드론이 없습니다.</div>`;
   const sel=selDrones(),tot=sel.reduce((a,d)=>a+d.rounds.reduce((b,r)=>b+r.len,0),0);
-  $("rvSum").innerHTML=`선택 ${sel.length}/${D.drones.length}대 · 이동 거리 합계 ${(tot/1000).toFixed(2)} km<br>${dateKo(D.started)} 임무 · ${D.rounds||1}회차까지<br>실선 = 실제 이동 경로 · 화살표 = 진행 방향 · ○ = 회차 시작 지점`;
+  const nd=(D.dets||[]).filter(d=>d.status!=="false").length;
+  $("rvSum").innerHTML=`선택 ${sel.length}/${D.drones.length}대 · 이동 거리 합계 ${(tot/1000).toFixed(2)} km${nd?` · <b style="color:#fca5a5">● 열화상 탐지 ${nd}건</b>`:""}<br>${dateKo(D.started)} 임무 · ${D.rounds||1}회차까지<br>실선 = 실제 이동 경로 · 화살표 = 진행 방향 · ○ = 회차 시작 지점`;
   if(fit)fitRoutes();
   RV.map.invalidate();
 }
@@ -3852,6 +3937,15 @@ function fitRoutes(){
   // 점이 많으면 일부만으로 범위 계산
   const step=Math.max(1,Math.floor(pts.length/2000));
   RV.map.fit(pts.filter((_,i)=>i%step===0||i===pts.length-1),40);
+}
+/* 열화상 탐지 지점: 빨간 점(불은 주황) + 온도 (지도·데이터 보기 경로 지도 공통). pulse: 미확인은 맥박처럼 퍼지는 테두리 */
+function drawDets(ctx,E,dets,P,pulse){
+  dets.forEach(d=>{
+    if(d.status==="false"||d.lat==null)return;const p=P(d),c=d.type==="fire"?"#f97316":"#ef4444";
+    if(pulse&&d.status==="new"&&!REDUCE_MOTION){const k=(performance.now()/900)%1;disc(ctx,p,8+k*16,null,`rgba(239,68,68,${1-k})`)}
+    disc(ctx,p,8,c,"#fff",2.5);
+    if(E.z>=15&&d.temp!=null)haloText(ctx,tempText(d),p[0]+12,p[1],"#fecaca",`700 ${sf(12)}px sans-serif`,"left");
+  });
 }
 function drawRoutes(ctx,E){
   const D=RV.data;if(!D)return;
@@ -3878,6 +3972,7 @@ function drawRoutes(ctx,E){
     if(segs.length){disc(ctx,segs[0][0],5,d.color,"#fff");
       const last=segs[segs.length-1];ends.push({p:r.live?P(r.live.x,r.live.y):last[last.length-1],d,live:!!r.live,round:r.round,multi:d.rounds.length>1})}
   }));
+  drawDets(ctx,E,D.dets||[],d=>E.toScreen(d.lat,d.lng),false);   // 이 임무의 열화상 탐지 (경로 선 위에)
   const h=E.toScreen(o.lat,o.lng);
   drawHome(ctx,h);
   ends.forEach(e=>{   // 각 회차 끝(비행 중이면 현재 위치)에 드론 번호
@@ -3903,7 +3998,7 @@ window.gcsBack=()=>{
   if(!$("confirm").hidden){$("confirm").hidden=true;return true}
   if(!$("sheet").hidden){closeSheet();return true}
   if(S.rsPick){rsEnd();return true}
-  if(S.picking||map.drag){S.picking=false;$("btnPick").classList.remove("warn");armDraw(false);return true}
+  if(S.picking||map.drag){S.picking=false;launchBtnUi();armDraw(false);return true}
   if(S.view==="settings"&&S.setPane){openSetPane(null);return true}
   if(S.view!=="map"){showView("map");return true}
   return false;
