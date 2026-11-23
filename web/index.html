@@ -534,6 +534,7 @@ td.r,th.r{text-align:right}
               <label>연결 방식<select id="sLink"><option value="usb">텔레메트리 무선기 (태블릿 USB에 직접)</option><option value="ws">브리지 · Wi-Fi (gcs_bridge.py)</option><option value="fb">Firebase (드론 LTE 직접)</option></select></label>
               <label id="lbBaud">무선기 속도<select id="sBaud"><option value="57600">57600 (SiK 기본)</option><option value="115200">115200</option><option value="38400">38400</option></select></label>
               <label id="lbWsUrl"><span id="tWsUrl">브리지 주소</span><input id="sWsUrl" type="url" inputmode="url" autocomplete="off" spellcheck="false" placeholder="ws://127.0.0.1:8766" style="font-size:14px"></label>
+              <label id="lbPiUrl">라즈베리파이 주소 (사진)<input id="sPiUrl" type="url" autocomplete="off" spellcheck="false" placeholder="비우면 자동 (노트북 브리지가 알려 준 IP 또는 http://dmdpi.local:8080)" style="font-size:14px"></label>
               <label id="lbWsToken"><span id="tWsToken">브리지 비밀번호</span><input id="sWsToken" type="password" autocomplete="off" spellcheck="false" placeholder="브리지를 --token으로 켰을 때" style="font-size:14px"></label>
             </div>
             <div class="row2" style="margin-top:12px">
@@ -685,7 +686,7 @@ const store={
   del(k){try{localStorage.removeItem("gcs."+k)}catch(e){}}
 };
 const DEFAULT_SPEC={flight:20,reserve:20,speed:8,climb:3,descent:1.5,wind:0,windDir:0,alt:100,fov:82,tfov:55,overlap:30,fwd:70,photoMB:8};   // 상승·하강 속도 = PX4 기본값 (MPC_Z_V_AUTO_UP/DN)
-const DEFAULT_PREFS={uiScale:1,mapType:"sat",mult:30,fallback:{lat:33.4996,lng:126.5312},wake:true,targets:true,source:"sim",wsUrl:"ws://127.0.0.1:8766",wsToken:"",link:"ws",baud:57600,airKey:"",airDomain:"",airOn:true,fbConfig:"",fbEmail:"",thermalMin:34,fireC:45,vibe:true};
+const DEFAULT_PREFS={uiScale:1,mapType:"sat",mult:30,fallback:{lat:33.4996,lng:126.5312},wake:true,targets:true,source:"sim",wsUrl:"ws://127.0.0.1:8766",wsToken:"",piUrl:"",piAuto:"",link:"ws",baud:57600,airKey:"",airDomain:"",airOn:true,fbConfig:"",fbEmail:"",thermalMin:34,fireC:45,vibe:true};
 const STALE_MS=5000,MIN_ALT=10; // 5초간 위치가 안 오면 신호 끊김, 10m 미만 고도는 촬영으로 안 침
 const newDrone=i=>({name:"드론 "+(i+1),enabled:true,battery:100});
 const defaultFleet=()=>Array.from({length:4},(_,i)=>newDrone(i));
@@ -2075,7 +2076,14 @@ function teleClose(silent){
 }
 /* Wi-Fi 브리지(파이)의 사진: 주소·목록 */
 const bridgeHttp=()=>(prefs.wsUrl||"").trim().replace(/^ws/i,"http").replace(/(\/\/[^/]+).*$/,"$1");
-const bridgeFile=rel=>`${bridgeHttp()}/files/${String(rel).split("/").map(encodeURIComponent).join("/")}${prefs.wsToken?"?t="+encodeURIComponent(prefs.wsToken):""}`;
+const fileAt=(base,rel)=>`${base}/files/${String(rel).split("/").map(encodeURIComponent).join("/")}${prefs.wsToken?"?t="+encodeURIComponent(prefs.wsToken):""}`;
+const bridgeFile=rel=>fileAt(bridgeHttp(),rel);
+/* 노트북 브리지 주소의 사진이 안 열리면(노트북이 꺼짐) 같은 파일을 파이에서 직접: <img onerror>에 씀 */
+const altSrc=u=>{const b=bridgeHttp();return u&&b&&u.startsWith(b+"/files/")?piBase()+u.slice(b.length):""};
+const imgFallback=el=>{const a=el.dataset.alt;if(a&&el.src!==a){el.dataset.alt="";el.src=a}};
+$("shBody").addEventListener("error",e=>{if(e.target.tagName==="IMG")imgFallback(e.target)},true);   // 칸 창 사진 (error는 위로 안 올라와서 capture)
+/* 라즈베리파이 촬영 프로그램 주소 (사진 직접 받기): 설정에 넣은 값 → 노트북 브리지가 알려 준 IP → dmdpi.local */
+const piBase=()=>(prefs.piUrl||prefs.piAuto||"http://dmdpi.local:8080").trim().replace(/\/+$/,"").replace(/^(?!https?:\/\/)/,"http://");
 const viaBridge=()=>prefs.source==="live"&&(prefs.link==="ws"||(prefs.link==="usb"&&/^wss?:\/\//i.test(prefs.wsUrl||"")));   // 무선기 방식: 파이 Wi-Fi 주소가 있으면 사진은 파이에서
 /* 사진 한 장 도착 → 칸 평균 온도에 더함 (Firebase 방식의 fbWatchPhotos와 같은 일) */
 /* 사진의 칸: 칸 번호가 있으면 그대로, 없으면 위치로 찾음 (못 찾으면 -1) */
@@ -2111,6 +2119,7 @@ setInterval(syncFromPi,10000);
 function onTeleMsg(m){
   if(!m||typeof m!=="object")return;
   if(m.type==="auth"){
+    if(typeof m.pi==="string"&&/^https?:\/\//.test(m.pi)&&m.pi!==prefs.piAuto){prefs.piAuto=m.pi.replace(/\/+$/,"");saveAll()}   // 노트북 브리지가 찾아 준 파이 IP (태블릿은 .local 이름을 못 찾는 경우가 많음)
     if(m.ok)return teleOk();
     tele.authFail=true;return teleStatus("bad",(m.msg||"브리지 비밀번호가 맞지 않습니다")+" · 설정에서 비밀번호를 확인한 뒤 ‘연결’을 누르세요");
   }
@@ -2465,7 +2474,7 @@ function fbWatchDetections(){
 async function cellPhotos(ci){
   const m=S.mission;
   if(m&&m.source==="sim")return (m.photoByCell.get(ci)||[]).map(p=>({...p,time:new Date(p.abs||m.started+p.t*1000),sim:true,therm:"sim"}));
-  if(viaBridge())return bridgePhotos(m,ci);
+  if(prefs.source==="live"&&prefs.link!=="fb")return livePhotos(m,ci);
   if(!fb.db)throw{code:"nofb"};
   const{mid,qc,box}=photoCell(m,ci);if(qc==null)return [];
   const col=fb.db.collection("missions").doc(mid).collection("photos");
@@ -2493,18 +2502,32 @@ function finishPhotos(m,out){
   return out.sort((a,b)=>(a.time||0)-(b.time||0));
 }
 /* 브리지(파이)에 이 칸 사진 목록을 물어봄. 칸 번호 없이 찍힌 사진은 위치로 거름 */
-async function bridgePhotos(m,ci){
+/* 칸 사진 목록을 base(노트북 브리지 또는 라즈베리파이 촬영 프로그램)에 물어봄. 칸 번호 없이 찍힌 사진은 위치로 거름 */
+async function photosFrom(base,m,ci){
   const{mid,qc,box}=photoCell(m,ci);if(qc==null)return [];
-  const ac=new AbortController(),tm=setTimeout(()=>ac.abort(),8000);
+  const ac=new AbortController(),tm=setTimeout(()=>ac.abort(),6000),tk=prefs.wsToken?"&t="+encodeURIComponent(prefs.wsToken):"";
   let list;
   try{
-    const r=await fetch(`${bridgeHttp()}/photos?mission=${encodeURIComponent(mid)}&cell=${qc}${prefs.wsToken?"&t="+encodeURIComponent(prefs.wsToken):""}`,{signal:ac.signal,cache:"no-store"});
-    if(!r.ok)throw{code:"bridge",msg:`브리지 응답 ${r.status}`};list=await r.json();
-  }catch(e){throw e.code?e:{code:"bridge",msg:"드론(파이)의 Wi-Fi에 연결되어 있는지 확인하세요."}}finally{clearTimeout(tm)}
+    const r=await fetch(`${base}/photos?mission=${encodeURIComponent(mid)}&cell=${qc}${tk}`,{signal:ac.signal,cache:"no-store"});
+    if(!r.ok)throw{code:"bridge",msg:r.status===403?"비밀번호(TOKEN)가 맞지 않습니다":`응답 ${r.status}`};list=await r.json();
+  }catch(e){throw e.code?e:{code:"bridge",msg:"연결되지 않음"}}finally{clearTimeout(tm)}
+  const file=rel=>rel?fileAt(base,rel):null;
   const inCell=p=>p.cell===qc||(p.cell==null&&p.lat>=box.la0&&p.lat<=box.la1&&p.lng>=box.lo0&&p.lng<=box.lo1);
-  return finishPhotos(m,list.filter(inCell).map(p=>photoRow(p,p.uid,num(p.takenAt)?new Date(p.takenAt):null,
-    p.thumb?bridgeFile(p.thumb):p.file?bridgeFile(p.file):null,p.file?bridgeFile(p.file):null,
-    p.thermal&&p.thermal!==p.file?bridgeFile(p.thermal):null)));   // 카메라가 없으면 열화상이 곧 사진(file)이라 겹치지 않게
+  return finishPhotos(m,list.filter(inCell).map(p=>photoRow(p,p.uid||p.id,num(p.takenAt)?new Date(p.takenAt):null,
+    file(p.thumb||p.file),file(p.file),p.thermal&&p.thermal!==p.file?file(p.thermal):null)));   // 카메라가 없으면 열화상이 곧 사진(file)이라 겹치지 않게
+}
+/* 실시간 임무의 칸 사진: 노트북 브리지 → (안 되거나 아직 없으면) 라즈베리파이에 직접 (태블릿이 파이와 같은 Wi-Fi·핫스팟일 때) */
+async function livePhotos(m,ci){
+  const tries=[];
+  if(viaBridge()&&tele.state==="ok")tries.push(["노트북",bridgeHttp()]);
+  tries.push(["파이",piBase()]);
+  const errs=[];let empty=null;
+  for(const[who,base]of tries){
+    try{const list=await photosFrom(base,m,ci);if(list.length||who==="파이"){list.from=who;return list}empty=list}
+    catch(e){errs.push(`${who}(${base.replace(/^https?:\/\//,"")}): ${e.msg||"연결되지 않음"}`)}
+  }
+  if(empty)return empty;   // 노트북은 '아직 사진 없음'이라고 답함 (파이는 비행 중이라 안 닿는 게 보통) → 오류 대신 '아직 없음'
+  throw{code:"bridge",msg:`${errs.join(" · ")}. 태블릿이 노트북 또는 라즈베리파이와 같은 Wi-Fi(핫스팟)에 있는지, 설정 → 드론 연결의 '라즈베리파이 주소'(예: http://192.168.0.10:8080)를 확인하세요.`};
 }
 async function openCell(ci){
   const c=S.plan&&S.plan.cells[ci];if(!c)return;   // 영역이 없어진 뒤(출처 전환 등) 눌러도 안전
@@ -2517,8 +2540,8 @@ async function openCell(ci){
   const tv=cellTemp(ci);
   $("shSub").textContent=`${own?own.name+" 구역 · ":""}${c.visited?"탐색 완료":"탐지 있음"} · 평균 ${tv!=null?tv.toFixed(1)+"°C":"온도 –"} · ${c.ll.lat.toFixed(5)}, ${c.ll.lng.toFixed(5)}`;
   $("shBody").innerHTML=`<div class="empty">사진을 불러오는 중…</div>`;$("sheet").hidden=false;document.body.classList.add("sheet-open");
-  let list;
-  try{list=await cellPhotos(ci)}catch(e){
+  let list,from="";
+  try{list=await cellPhotos(ci);from=list.from||""}catch(e){
     if(S.selCell!==ci)return;
     $("shBody").innerHTML=e.code==="nofb"?`<div class="empty">이 칸의 사진은 Firebase에 있습니다.<br>설정에서 Firebase에 연결해 주세요.</div><button class="btn pri wide" style="margin-top:12px" data-go="settings" data-pane="fb">Firebase 설정으로 이동</button>`
       :`<div class="empty">사진을 불러오지 못했습니다.<br>${esc(e.code==="bridge"?e.msg:e.code==="nomission"?"이 구역의 임무 ID가 없습니다. 경로를 업로드한 임무에서만 사진을 찾을 수 있습니다.":fbErr(e))}</div>`;
@@ -2534,15 +2557,15 @@ async function openCell(ci){
   const nTherm=list.length-nPhoto;
   list=dets.concat(list);S.viewList=list;
   if(!list.length){$("shBody").innerHTML=`<div class="empty">이 칸에서 올라온 사진이 아직 없습니다.<br>드론이 사진을 올리면 다시 눌러 확인하세요.</div>`;return}
-  $("shSub").textContent+=`${dets.length?` · 열화상 탐지 ${dets.length}건`:""} · 사진 ${nPhoto}장${nTherm?` · 열화상 ${nTherm}장`:""}`;
+  $("shSub").textContent+=`${dets.length?` · 열화상 탐지 ${dets.length}건`:""} · 사진 ${nPhoto}장${nTherm?` · 열화상 ${nTherm}장`:""}${from==="파이"&&nPhoto?" · 파이에서 직접":""}`;
   $("shBody").innerHTML=`<div class="thumbs">${list.map((p,i)=>{
     const src=imgOf(p,320);
-    return `<button class="thumb" data-ph="${i}" ${p.thermal?'style="border-color:#ef4444"':p.timg?'style="border-color:#f97316"':""}>${src?`<img loading="lazy" alt="${esc(p.name)} ${p.thermal||p.timg?"열화상":"촬영"} 사진" src="${esc(src)}">${p.nup?'<i class="nup" title="북쪽이 위">N↑</i>':""}`:`<div class="empty" style="aspect-ratio:4/3;border:0;display:grid;place-items:center">이미지 없음</div>`}
+    return `<button class="thumb" data-ph="${i}" ${p.thermal?'style="border-color:#ef4444"':p.timg?'style="border-color:#f97316"':""}>${src?`<img loading="lazy" alt="${esc(p.name)} ${p.thermal||p.timg?"열화상":"촬영"} 사진" src="${esc(src)}" data-alt="${esc(altSrc(src))}">${p.nup?'<i class="nup" title="북쪽이 위">N↑</i>':""}`:`<div class="empty" style="aspect-ratio:4/3;border:0;display:grid;place-items:center">이미지 없음</div>`}
       <span>${p.thermal?`<b style="color:#fca5a5">열화상 ${tempText(p.det)}</b> · `:p.timg?`<b style="color:#fdba74">열화상</b> · `:""}<b>${esc(p.name)}</b> · ${p.time?hms(p.time):"시각 없음"}${p.alt!=null?" · "+Math.round(p.alt)+"m":""}${p.tAvg!=null?" · "+p.tAvg.toFixed(1)+"°C":""}${p.reshoot?`<br><b style="color:#93c5fd">재촬영</b>`:""}</span></button>`}).join("")}</div>`;
 }
 function showPhoto(i){
   const list=S.viewList;if(!list.length)return;S.viewIdx=(i+list.length)%list.length;const p=list[S.viewIdx];
-  $("vImg").src=imgOf(p,1024);$("vImg").alt=`${p.name} ${p.thermal||p.timg?"열화상":"촬영"} 사진`;
+  const vs=imgOf(p,1024);$("vImg").dataset.alt=altSrc(vs);$("vImg").onerror=()=>imgFallback($("vImg"));$("vImg").src=vs;$("vImg").alt=`${p.name} ${p.thermal||p.timg?"열화상":"촬영"} 사진`;
   $("vMeta").innerHTML=`${p.reshoot?'<b style="color:#93c5fd">재촬영</b> · ':""}<b>${p.thermal?`열화상 탐지 ${p.det.temp!=null?tempText(p.det)+" · ":""}`:p.timg?"열화상 · ":""}${esc(p.name)}</b> · ${S.viewIdx+1}/${list.length}<br><span class="num">${p.time?hms(p.time):"–"} · ${(+p.lat).toFixed(6)}, ${(+p.lng).toFixed(6)}${p.alt!=null?" · 고도 "+Math.round(p.alt)+"m":""}${p.tAvg!=null?" · 평균 "+p.tAvg.toFixed(1)+"°C":""}</span>`;
   $("viewer").hidden=false;
 }
@@ -3476,7 +3499,7 @@ function renderSettings(){
     <dt>오류</dt><dd>${S.locError?esc(S.locError):"없음"}</dd>`;
   $("diagHelp").textContent=S.locError?"":"위치가 정상적으로 잡히고 있습니다.";
   const put=(id,v)=>{if(document.activeElement!==$(id))$(id).value=v}; // 입력 중인 칸은 건드리지 않음
-  put("sMapType",prefs.mapType);put("sMult",String(prefs.mult));put("sSource",prefs.source);put("sWsUrl",prefs.wsUrl);put("sWsToken",prefs.wsToken||"");put("sAirKey",prefs.airKey||"");put("sAirDomain",prefs.airDomain||location.origin);$("sAirOn").checked=!!prefs.airOn;airUi();put("sLink",prefs.link||"ws");linkUi();
+  put("sMapType",prefs.mapType);put("sMult",String(prefs.mult));put("sSource",prefs.source);put("sWsUrl",prefs.wsUrl);put("sWsToken",prefs.wsToken||"");put("sPiUrl",prefs.piUrl||"");put("sAirKey",prefs.airKey||"");put("sAirDomain",prefs.airDomain||location.origin);$("sAirOn").checked=!!prefs.airOn;airUi();put("sLink",prefs.link||"ws");linkUi();
   put("sHomeLat",prefs.fallback.lat);put("sHomeLng",prefs.fallback.lng);put("sThermal",prefs.thermalMin);put("sFireC",prefs.fireC);
   put("sFbCfg",prefs.fbConfig);put("sFbEmail",prefs.fbEmail);
   Object.entries(TOGGLES).forEach(([id,k])=>$(id).checked=prefs[k]);
@@ -3738,6 +3761,7 @@ $("btnUseFallback").onclick=()=>{if(isOpen())return toast("임무 중에는 출�
 $("sMapType").onchange=e=>setMapType(e.target.value);
 $("sSource").onchange=e=>{setSource(e.target.value);renderSettings()};
 $("sWsUrl").onchange=e=>{prefs.wsUrl=e.target.value.trim();saveAll()};
+$("sPiUrl").onchange=e=>{prefs.piUrl=e.target.value.trim().replace(/\/+$/,"");saveAll()};
 $("sWsToken").onchange=e=>{prefs.wsToken=e.target.value;saveAll()};
 $("sAirKey").onchange=e=>{prefs.airKey=e.target.value.trim();saveAll();AIR.msg="";airUi();airLoad(true)};
 $("sAirDomain").onchange=e=>{prefs.airDomain=e.target.value.trim();saveAll();AIR.msg="";airUi()};
